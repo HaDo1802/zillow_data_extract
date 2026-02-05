@@ -126,29 +126,25 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests psycopg2-binary python-dotenv
+          pip install pandas requests python-dotenv boto3
 
       - name: Create data directories
         run: |
           mkdir -p data/raw data/transformed etl_log
           chmod 777 data/raw data/transformed etl_log
 
-      - name: Configure environment (Connect to Local PostgreSQL)
+      - name: Configure environment
         run: |
           # API Key (required for extract.py)
           echo "RAPID_API_KEY=${{ secrets.RAPID_API_KEY }}" > .env
+          echo "✅ Environment configured for extraction + transform"
 
-          # PostgreSQL credentials from GitHub Secrets
-          echo "POSTGRES_HOST_LOCAL=${{ secrets.POSTGRES_HOST }}" >> .env
-          echo "POSTGRES_DB_LOCAL=${{ secrets.POSTGRES_DB }}" >> .env
-          echo "POSTGRES_USER_LOCAL=${{ secrets.POSTGRES_USER }}" >> .env
-          echo "POSTGRES_PASSWORD_LOCAL=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-          echo "POSTGRES_PORT_LOCAL=${{ secrets.POSTGRES_PORT }}" >> .env
-
-          # Schema name
-          echo "DEFAULT_SCHEMA=real_estate_data" >> .env
-
-          echo "✅ Environment configured to connect to: ${{ secrets.POSTGRES_HOST }}:${{ secrets.POSTGRES_PORT }}/${{ secrets.POSTGRES_DB }}"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Step 1 - Extract Real Estate Data
         run: |
@@ -180,32 +176,76 @@ jobs:
             exit 1
           fi
 
-      - name: Step 3 - Load to PostgreSQL
+      - name: Step 3 - Upload to S3
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
         run: |
-          echo "🗄️ Starting PostgreSQL load..."
-          cd etl
-          python load.py
-          echo "✅ PostgreSQL load completed"
+          if [ -z "$S3_BUCKET" ]; then
+            echo "❌ Missing required secret: S3_BUCKET_NAME"
+            exit 1
+          fi
 
-      - name: Verify Data Load
+          ETL_RUN_ID=$(date +'%Y%m%d_%H%M')
+          SNAPSHOT_DATE=$(date +'%Y%m%d')
+          RAW_S3_KEY="raw/raw_${SNAPSHOT_DATE}_${ETL_RUN_ID}.csv"
+          TRANSFORMED_S3_KEY="transformed/transformed_${SNAPSHOT_DATE}_${ETL_RUN_ID}.csv"
+
+          echo "RAW_S3_KEY=${RAW_S3_KEY}" >> "$GITHUB_ENV"
+          echo "TRANSFORMED_S3_KEY=${TRANSFORMED_S3_KEY}" >> "$GITHUB_ENV"
+
+          echo "☁️ Uploading files to s3://${S3_BUCKET}"
+          python - <<'PY'
+          import os
+          from etl.load_to_s3 import load_to_s3
+
+          bucket = os.environ["S3_BUCKET"]
+          raw_key = os.environ["RAW_S3_KEY"]
+          transformed_key = os.environ["TRANSFORMED_S3_KEY"]
+
+          load_to_s3("data/raw/raw_latest.csv", bucket, raw_key)
+          load_to_s3("data/transformed/transformed_latest.csv", bucket, transformed_key)
+          PY
+          echo "✅ S3 upload completed"
+
+      - name: Verify S3 Upload
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
         run: |
-          # Verify data was loaded to PostgreSQL
-          PGPASSWORD=test_pass_123 psql -h localhost -U test_user -d test_real_estate -c "\dt real_estate_data.*" || echo "⚠️ Could not list tables"
-          PGPASSWORD=test_pass_123 psql -h localhost -U test_user -d test_real_estate -c "SELECT COUNT(*) as total_records FROM real_estate_data.properties_data_history;" || echo "⚠️ Could not count records"
+          python - <<'PY'
+          import os
+          import boto3
+
+          s3 = boto3.client("s3")
+          bucket = os.environ["S3_BUCKET"]
+          raw_key = os.environ["RAW_S3_KEY"]
+          transformed_key = os.environ["TRANSFORMED_S3_KEY"]
+
+          s3.head_object(Bucket=bucket, Key=raw_key)
+          s3.head_object(Bucket=bucket, Key=transformed_key)
+
+          print(f"✅ Verified: s3://{bucket}/{raw_key}")
+          print(f"✅ Verified: s3://{bucket}/{transformed_key}")
+          PY
 
       - name: Pipeline Summary
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
         run: |
           echo "🎉 Real Estate ETL Pipeline Completed Successfully!"
           echo "📅 Executed on: $(date)"
           echo "📊 Pipeline Summary:"
           echo "  ✅ Data Extraction (Zillow API)"
           echo "  ✅ Data Transformation"
-          echo "  ✅ PostgreSQL Load"
+          echo "  ✅ S3 Upload"
 
           echo ""
-          echo "📦 Data Files:"
+          echo "📦 Local Data Files:"
           ls -lh data/raw/raw_latest.csv 2>/dev/null || echo "  Raw data: Not found"
           ls -lh data/transformed/transformed_latest.csv 2>/dev/null || echo "  Transformed data: Not found"
+          echo ""
+          echo "☁️ S3 Objects:"
+          echo "  s3://${S3_BUCKET}/${RAW_S3_KEY}"
+          echo "  s3://${S3_BUCKET}/${TRANSFORMED_S3_KEY}"
 
       - name: Upload Data Artifacts
         uses: actions/upload-artifact@v4
