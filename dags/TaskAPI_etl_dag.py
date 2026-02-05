@@ -4,6 +4,9 @@ from typing import Dict, List
 import pandas as pd
 from typing import Dict, Any
 
+DEFAULT_LOCATIONS = ["Las Vegas, NV"]
+DEFAULT_MAX_PAGES = 2
+
 
 @dag(
     dag_id="real_estate_etl_taskflow",
@@ -53,7 +56,7 @@ def real_estate_etl_pipeline():
         log.info("Starting extract_zillow. Will write to: %s", output_file)
 
         try:
-            df = fetch_all_locations()
+            df = fetch_all_locations(DEFAULT_LOCATIONS, DEFAULT_MAX_PAGES)
             log.info("Fetched dataframe shape=%s", getattr(df, "shape", None))
 
             if df is None or df.empty:

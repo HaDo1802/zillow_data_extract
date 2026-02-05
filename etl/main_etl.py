@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -13,29 +14,41 @@ from load_to_s3 import load_to_s3  # noqa: E402
 
 logger = get_logger(__name__)
 
+DEFAULT_LOCATIONS = ["Las Vegas, NV"]
+DEFAULT_MAX_PAGES = 2
+DEFAULT_S3_BUCKET = "real-estate-scraped-data"
 
-def get_base_paths():
-    if os.path.exists("/opt/airflow"):
-        base_dir = "/opt/airflow"
-        raw_dir = os.path.join(base_dir, "data", "raw")
-        transformed_dir = os.path.join(base_dir, "data", "transformed")
+
+def get_base_paths(base_dir: Optional[str] = None) -> Tuple[str, str, str]:
+    if base_dir:
+        selected_base_dir = base_dir
+    elif os.path.exists("/opt/airflow"):
+        selected_base_dir = "/opt/airflow"
     else:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        raw_dir = os.path.join(base_dir, "data", "raw")
-        transformed_dir = os.path.join(base_dir, "data", "transformed")
+        selected_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    raw_dir = os.path.join(selected_base_dir, "data", "raw")
+    transformed_dir = os.path.join(selected_base_dir, "data", "transformed")
 
     os.makedirs(raw_dir, exist_ok=True)
     os.makedirs(transformed_dir, exist_ok=True)
 
-    return base_dir, raw_dir, transformed_dir
+    return selected_base_dir, raw_dir, transformed_dir
 
 
-def run_etl_pipeline():
+def run_etl_pipeline(
+    locations: Optional[List[str]] = None,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    s3_bucket: str = DEFAULT_S3_BUCKET,
+    base_dir: Optional[str] = None,
+) -> Tuple[bool, Dict[str, Any]]:
     logger.info("STARTING REAL ESTATE ETL PIPELINE")
+
+    target_locations = locations or DEFAULT_LOCATIONS
 
     start_time = datetime.now()
     etl_run_id = start_time.strftime("%Y%m%d_%H%M")
-    base_dir, raw_dir, transformed_dir = get_base_paths()
+    resolved_base_dir, raw_dir, transformed_dir = get_base_paths(base_dir=base_dir)
     env_type = "Docker/Airflow" if os.path.exists("/opt/airflow") else "Local"
 
     logger.info(f"Environment: {env_type} | ETL Run ID: {etl_run_id}")
@@ -44,11 +57,15 @@ def run_etl_pipeline():
         "etl_run_id": etl_run_id,
         "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
         "environment": env_type,
+        "locations": target_locations,
+        "max_pages": max_pages,
+        "s3_bucket": s3_bucket,
+        "base_dir": resolved_base_dir,
     }
 
     try:
         logger.info("STAGE 1: EXTRACT")
-        df_extracted = fetch_all_locations()
+        df_extracted = fetch_all_locations(target_locations, max_pages)
         if df_extracted.empty:
             details["error"] = "No data extracted from API"
             details["failed_step"] = "EXTRACT"
@@ -83,12 +100,12 @@ def run_etl_pipeline():
 
         load_to_s3(
             file_path=raw_latest,
-            bucket_name="real-estate-scraped-data",
+            bucket_name=s3_bucket,
             s3_key=raw_s3_key,
         )
         load_to_s3(
             file_path=latest_file,
-            bucket_name="real-estate-scraped-data",
+            bucket_name=s3_bucket,
             s3_key=transformed_s3_key,
         )
         logger.info("LOAD TO S3 COMPLETED\n")

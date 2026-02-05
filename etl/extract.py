@@ -15,8 +15,6 @@ from utils.config import config  # noqa: E402
 
 logger = get_logger(__name__)
 
-LOCATIONS = ["Las Vegas, NV"]
-
 
 def fetch_zillow(location, max_pages=2):
     """Fetch property listings from Zillow API for a specific location."""
@@ -33,7 +31,9 @@ def fetch_zillow(location, max_pages=2):
     all_props = []
     page = 1
 
-    logger.info(f"Starting extraction for location: {location} (max_pages: {max_pages})")
+    logger.info(
+        f"Starting extraction for location: {location} (max_pages: {max_pages})"
+    )
 
     try:
         while page <= max_pages:
@@ -58,11 +58,16 @@ def fetch_zillow(location, max_pages=2):
             json_data = res.json()
 
             if not json_data or "props" not in json_data:
-                logger.warning(f"No property data in response for {location} page {page}")
+                logger.warning(
+                    f"No property data in response for {location} page {page}"
+                )
                 break
 
             props = json_data["props"]
-            logger.info(f"Page {page} fetched successfully - " f"Properties: {len(props)}, Duration: {request_duration}s")
+            logger.info(
+                f"Page {page} fetched successfully - "
+                f"Properties: {len(props)}, Duration: {request_duration}s"
+            )
             all_props.extend(props)
 
             # Pagination logic
@@ -80,7 +85,10 @@ def fetch_zillow(location, max_pages=2):
         df_raw = pd.DataFrame(all_props)
         df_raw["extracted_at"] = datetime.now()
 
-        logger.info(f"Extraction complete for {location} - " f"Total properties: {len(df_raw)}, Pages processed: {page - 1}")
+        logger.info(
+            f"Extraction complete for {location} - "
+            f"Total properties: {len(df_raw)}, Pages processed: {page - 1}"
+        )
 
         return df_raw
 
@@ -95,13 +103,18 @@ def fetch_zillow(location, max_pages=2):
         sys.exit(1)
 
 
-def fetch_all_locations():
+def fetch_all_locations(locations=None, max_pages=2):
     """
     Fetch data from all configured locations and combine into single file.
 
     Returns:
         pd.DataFrame: Combined data from all locations
     """
+    if locations is None:
+        LOCATIONS = ["Las Vegas, NV"]
+    else:
+        LOCATIONS = locations
+
     logger.info("STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS")
     logger.info(f"Locations configured: {len(LOCATIONS)}")
     logger.info(f"Target locations: {', '.join(LOCATIONS)}")
@@ -114,7 +127,7 @@ def fetch_all_locations():
     for loc in LOCATIONS:
         logger.info(f"Processing location: {loc}")
         try:
-            df_result = fetch_zillow(loc)
+            df_result = fetch_zillow(loc, max_pages=max_pages)
 
             if isinstance(df_result, pd.DataFrame) and not df_result.empty:
                 all_data.append(df_result)
@@ -156,12 +169,16 @@ def fetch_all_locations():
     if os.path.exists("/opt/airflow"):
         raw_dir = "/opt/airflow/data/raw"
     else:
-        raw_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "raw")
+        raw_dir = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "data", "raw"
+        )
 
     os.makedirs(raw_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d")
     raw_timestamped = os.path.join(raw_dir, f"raw_{timestamp}.csv")
-    df_combined.to_csv(raw_timestamped, index=False)  # Consider using Polars for optimizing large files
+    df_combined.to_csv(
+        raw_timestamped, index=False
+    )  # Consider using Polars for optimizing large files
     logger.info(f"Saved timestamped file: {raw_timestamped}")
 
     # Save latest file (for transform script to read)
@@ -175,7 +192,7 @@ def fetch_all_locations():
 if __name__ == "__main__":
     logger.info("Starting Zillow data extraction script:")
     start_time = datetime.now()
-    df_result = fetch_all_locations()
+    df_result = fetch_all_locations(["Las Vegas, NV"], 2)
     duration = datetime.now() - start_time
     if not df_result.empty:
         logger.info("\n" + "=" * 70)
