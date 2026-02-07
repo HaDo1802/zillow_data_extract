@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import requests
@@ -21,7 +21,7 @@ def fetch_zillow(location, max_pages=2):
 
     if not config.RAPID_API_KEY:
         logger.error("RAPID_API_KEY not configured in environment")
-        sys.exit(1)
+        raise RuntimeError("RAPID_API_KEY not configured in environment")
 
     headers = {
         "x-rapidapi-key": config.RAPID_API_KEY,
@@ -83,7 +83,7 @@ def fetch_zillow(location, max_pages=2):
             logger.error(f"No data extracted from {location} after {page - 1} page(s)")
             return pd.DataFrame()
         df_raw = pd.DataFrame(all_props)
-        df_raw["extracted_at"] = datetime.now()
+        df_raw["extracted_at"] = datetime.now(timezone.utc)
 
         logger.info(
             f"Extraction complete for {location} - "
@@ -92,15 +92,15 @@ def fetch_zillow(location, max_pages=2):
 
         return df_raw
 
-    except requests.exceptions.Timeout:
+    except requests.exceptions.Timeout as e:
         logger.error(f"Request timeout for {location} page {page}")
-        sys.exit(1)
+        raise
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error for {location} page {page}: {str(e)}")
-        sys.exit(1)
+        raise
     except Exception as e:
         logger.error(f"Unexpected error fetching {location}: {str(e)}", exc_info=True)
-        sys.exit(1)
+        raise
 
 
 def fetch_all_locations(locations=None, max_pages=2):
@@ -174,7 +174,7 @@ def fetch_all_locations(locations=None, max_pages=2):
         )
 
     os.makedirs(raw_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     raw_timestamped = os.path.join(raw_dir, f"raw_{timestamp}.csv")
     df_combined.to_csv(
         raw_timestamped, index=False
@@ -191,9 +191,9 @@ def fetch_all_locations(locations=None, max_pages=2):
 
 if __name__ == "__main__":
     logger.info("Starting Zillow data extraction script:")
-    start_time = datetime.now()
+    start_time = datetime.now(timezone.utc)
     df_result = fetch_all_locations(["Las Vegas, NV"], 2)
-    duration = datetime.now() - start_time
+    duration = datetime.now(timezone.utc) - start_time
     if not df_result.empty:
         logger.info("\n" + "=" * 70)
         logger.info("EXTRACTION COMPLETED SUCCESSFULLY")
@@ -212,4 +212,4 @@ if __name__ == "__main__":
         logger.error("\n" + "=" * 70)
         logger.error("EXTRACTION FAILED - No data retrieved")
         logger.error("=" * 70)
-        sys.exit(1)
+        raise SystemExit(1)

@@ -1,6 +1,7 @@
+import argparse
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +47,7 @@ def run_etl_pipeline(
 
     target_locations = locations or DEFAULT_LOCATIONS
 
-    start_time = datetime.now()
+    start_time = datetime.now(timezone.utc)
     etl_run_id = start_time.strftime("%Y%m%d_%H%M")
     resolved_base_dir, raw_dir, transformed_dir = get_base_paths(base_dir=base_dir)
     env_type = "Docker/Airflow" if os.path.exists("/opt/airflow") else "Local"
@@ -110,7 +111,7 @@ def run_etl_pipeline(
         )
         logger.info("LOAD TO S3 COMPLETED\n")
 
-        end_time = datetime.now()
+        end_time = datetime.now(timezone.utc)
         duration = end_time - start_time
 
         details["end_time"] = end_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -131,14 +132,49 @@ def run_etl_pipeline(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Real Estate ETL Pipeline - Extract, Transform, and Load data"
+    )
+    parser.add_argument(
+        "--max-pages",
+        type=int,
+        default=DEFAULT_MAX_PAGES,
+        help=f"Maximum number of pages to scrape per location (default: {DEFAULT_MAX_PAGES})",
+    )
+    parser.add_argument(
+        "--locations",
+        nargs="+",
+        default=DEFAULT_LOCATIONS,
+        help=f"List of locations to scrape (default: {DEFAULT_LOCATIONS})",
+    )
+    parser.add_argument(
+        "--s3-bucket",
+        type=str,
+        default=DEFAULT_S3_BUCKET,
+        help=f"S3 bucket name (default: {DEFAULT_S3_BUCKET})",
+    )
+    parser.add_argument(
+        "--base-dir",
+        type=str,
+        default=None,
+        help="Base directory for data storage (optional, defaults to project directory)",
+    )
+
+    args = parser.parse_args()
+
     logger.info("Real Estate ETL Pipeline - Main Entry Point\n")
 
     email_notifier = EmailNotifier()
-    pipeline_start = datetime.now()
+    pipeline_start = datetime.now(timezone.utc)
 
-    success, details = run_etl_pipeline()
+    success, details = run_etl_pipeline(
+        locations=args.locations,
+        max_pages=args.max_pages,
+        s3_bucket=args.s3_bucket,
+        base_dir=args.base_dir,
+    )
 
-    details["total_execution_time"] = str(datetime.now() - pipeline_start).split(".")[0]
+    details["total_execution_time"] = str(datetime.now(timezone.utc) - pipeline_start).split(".")[0]
 
     if success:
         logger.info("Sending success email...")

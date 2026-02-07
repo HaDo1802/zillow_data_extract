@@ -1,6 +1,6 @@
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import psycopg2
@@ -149,7 +149,7 @@ def load_csv(csv_file=DEFAULT_FILE):
         logger.info(f"Columns: {len(df.columns)}")
 
         df = df.where(pd.notna(df), None)
-        df["loaded_at"] = datetime.now()
+        df["loaded_at"] = datetime.now(timezone.utc)
         # Write to temporary file
         tmp_file = "/tmp/property_history_load.csv"
         df.to_csv(tmp_file, index=False)
@@ -210,9 +210,9 @@ if __name__ == "__main__":
         conn.close()
         logger.info("Database connection successful!\n")
 
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         load_csv()
-        duration = datetime.now() - start_time
+        duration = datetime.now(timezone.utc) - start_time
 
         logger.info("DATA LOAD COMPLETED SUCCESSFULLY")
         logger.info(f"Duration: {duration}")

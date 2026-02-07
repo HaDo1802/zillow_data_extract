@@ -7,7 +7,7 @@ Sends email notifications about ETL pipeline success/failure status.
 
 import os
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -212,7 +212,7 @@ def send_test_email():
         "records_loaded": 120,
         "quality_rate": "96.0%",
         "duration": "00:02:15",
-        "end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "end_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         "environment": "Local (Test)",
     }
 

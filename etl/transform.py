@@ -222,7 +222,7 @@ def main_transform(input_file=DEFAULT_INPUT, output_dir=DEFAULT_OUTPUT_DIR):
         df_final.drop(columns=deleted_cols, inplace=True)
         logger.info(f"Removed {len(deleted_cols)} unnecessary columns")
 
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         logger.info(f"Processed at: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
         essential_fields = ["zillow_property_id", "price"]
@@ -272,9 +272,9 @@ if __name__ == "__main__":
     env_name = "Docker/Airflow" if is_docker else "Local"
     logger.info(f"Running in {env_name} environment\n")
     try:
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         df_transformed, timestamped_path, latest_path = main_transform()
-        duration = datetime.now() - start_time
+        duration = datetime.now(timezone.utc) - start_time
         logger.info("TRANSFORMATION COMPLETED SUCCESSFULLY")
         logger.info(f"Total duration: {duration}")
         logger.info(f"Records transformed: {len(df_transformed)}")

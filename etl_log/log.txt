@@ -539,3 +539,93 @@ AttributeError: 'str' object has no attribute 'dt'
 2026-02-04 22:01:08 | INFO     | email_notifier | Preparing success email notification...
 2026-02-04 22:01:08 | INFO     | email_notifier | Connecting to SMTP server: smtp.gmail.com:587
 2026-02-04 22:01:11 | INFO     | email_notifier | Email notification sent successfully to havando1802@gmail.com
+2026-02-07 11:26:16 | INFO     | __main__ | Real Estate ETL Pipeline - Main Entry Point
+
+2026-02-07 11:26:16 | INFO     | email_notifier | Email notifier initialized: havando1802@gmail.com -> havando1802@gmail.com
+2026-02-07 11:26:16 | INFO     | __main__ | STARTING REAL ESTATE ETL PIPELINE
+2026-02-07 11:26:16 | INFO     | __main__ | Environment: Local | ETL Run ID: 20260207_1126
+2026-02-07 11:26:16 | INFO     | __main__ | STAGE 1: EXTRACT
+2026-02-07 11:26:16 | INFO     | extract | STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS
+2026-02-07 11:26:16 | INFO     | extract | Locations configured: 1
+2026-02-07 11:26:16 | INFO     | extract | Target locations: Las Vegas, NV
+2026-02-07 11:26:16 | INFO     | extract | Processing location: Las Vegas, NV
+2026-02-07 11:26:16 | INFO     | extract | Starting extraction for location: Las Vegas, NV (max_pages: 5)
+2026-02-07 11:26:16 | INFO     | extract | Fetching page 1 for Las Vegas, NV
+2026-02-07 11:26:19 | INFO     | extract | Page 1 fetched successfully - Properties: 41, Duration: 2.85s
+2026-02-07 11:26:19 | INFO     | extract | Fetching page 2 for Las Vegas, NV
+2026-02-07 11:26:20 | INFO     | extract | Page 2 fetched successfully - Properties: 41, Duration: 1.58s
+2026-02-07 11:26:21 | INFO     | extract | Fetching page 3 for Las Vegas, NV
+2026-02-07 11:26:22 | INFO     | extract | Page 3 fetched successfully - Properties: 41, Duration: 1.38s
+2026-02-07 11:26:22 | INFO     | extract | Fetching page 4 for Las Vegas, NV
+2026-02-07 11:26:23 | INFO     | extract | Page 4 fetched successfully - Properties: 41, Duration: 1.13s
+2026-02-07 11:26:24 | INFO     | extract | Fetching page 5 for Las Vegas, NV
+2026-02-07 11:26:25 | INFO     | extract | Page 5 fetched successfully - Properties: 41, Duration: 1.87s
+2026-02-07 11:26:26 | INFO     | extract | Extraction complete for Las Vegas, NV - Total properties: 205, Pages processed: 5
+2026-02-07 11:26:26 | INFO     | extract | SUCCESS - Fetched 205 properties from Las Vegas, NV
+2026-02-07 11:26:28 | INFO     | extract | EXTRACTION SUMMARY
+2026-02-07 11:26:28 | INFO     | extract | Locations processed: 1
+2026-02-07 11:26:28 | INFO     | extract | Successful: 1
+2026-02-07 11:26:28 | INFO     | extract | Failed: 0
+2026-02-07 11:26:28 | INFO     | extract | Total properties fetched: 205
+2026-02-07 11:26:28 | INFO     | extract | Unique properties: 205
+2026-02-07 11:26:28 | INFO     | extract | Duplicates removed: 0
+2026-02-07 11:26:28 | INFO     | extract | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_20260207.csv
+2026-02-07 11:26:28 | INFO     | extract | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-07 11:26:28 | INFO     | __main__ | EXTRACT COMPLETED: 205 properties
+2026-02-07 11:26:28 | INFO     | __main__ | STAGE 2: TRANSFORM
+2026-02-07 11:26:28 | INFO     | transform | STARTING DATA TRANSFORMATION
+2026-02-07 11:26:28 | INFO     | transform | Reading input file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-07 11:26:28 | INFO     | transform | Loaded 205 raw records
+2026-02-07 11:26:28 | INFO     | transform | Columns found: 33
+2026-02-07 11:26:28 | INFO     | transform | Step 1: Extracting address components...
+2026-02-07 11:26:28 | INFO     | transform | Address components extracted successfully
+2026-02-07 11:26:28 | INFO     | transform | Step 2: Extracting listing subtype information...
+2026-02-07 11:26:28 | INFO     | transform | Listing subtype flags extracted
+2026-02-07 11:26:28 | INFO     | transform | Step 3: Converting timestamp fields...
+2026-02-07 11:26:28 | INFO     | transform | Converted datePriceChanged to datetime
+2026-02-07 11:26:28 | INFO     | transform | Step 4: Add snapshot dates...
+2026-02-07 11:26:28 | INFO     | transform | Snapshot dates added
+2026-02-07 11:26:28 | INFO     | transform | Step 5: Normalizing lot area to square feet...
+2026-02-07 11:26:28 | INFO     | transform | Lot areas normalized to sqft
+2026-02-07 11:26:28 | INFO     | transform | Step 6: Extracting Vegas districts...
+2026-02-07 11:26:28 | INFO     | transform | Identified 9 unique districts
+2026-02-07 11:26:28 | INFO     | transform | Step 7: Removing unnecessary columns...
+2026-02-07 11:26:28 | INFO     | transform | Removed 7 unnecessary columns
+2026-02-07 11:26:28 | INFO     | transform | Processed at: 2026-02-07 11:26:28
+2026-02-07 11:26:28 | INFO     | transform | All records passed essential field validation
+2026-02-07 11:26:28 | INFO     | transform | Final record count: 205
+2026-02-07 11:26:28 | INFO     | transform | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_20260207.csv
+2026-02-07 11:26:28 | INFO     | transform | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-07 11:26:28 | INFO     | transform | TRANSFORMATION SUMMARY
+2026-02-07 11:26:28 | INFO     | transform | Input file: raw_latest.csv
+2026-02-07 11:26:28 | INFO     | transform | Initial records: 205
+2026-02-07 11:26:28 | INFO     | transform | Final records: 205
+2026-02-07 11:26:28 | INFO     | transform | Records filtered: 0 (0.0%)
+2026-02-07 11:26:28 | INFO     | transform | Output directory: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed
+2026-02-07 11:26:28 | INFO     | __main__ | TRANSFORM COMPLETED
+2026-02-07 11:26:28 | INFO     | __main__ | STAGE 3: LOAD
+2026-02-07 11:26:28 | INFO     | load | STARTING DATA LOAD TO POSTGRESQL
+2026-02-07 11:26:28 | INFO     | load | Loading file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-07 11:26:28 | INFO     | load | Connecting to PostgreSQL (local): localhost:5432/zillow_api as postgres
+2026-02-07 11:26:28 | INFO     | load | Creating schema if not exists: real_estate_data
+2026-02-07 11:26:28 | INFO     | load | Creating table if not exists: real_estate_data.properties_data_history
+2026-02-07 11:26:28 | INFO     | load | Schema and objects verified/created
+2026-02-07 11:26:28 | INFO     | load | Loaded 205 records from CSV
+2026-02-07 11:26:28 | INFO     | load | Columns: 27
+2026-02-07 11:26:28 | INFO     | load | Created temporary file: /tmp/property_history_load.csv
+2026-02-07 11:26:28 | INFO     | load | COPY completed successfully
+2026-02-07 11:26:28 | INFO     | load | Total rows in history table: 615
+2026-02-07 11:26:28 | INFO     | load | Database connection closed
+2026-02-07 11:26:28 | INFO     | __main__ | LOAD COMPLETED
+
+2026-02-07 11:26:28 | INFO     | __main__ | Load to S3
+2026-02-07 11:26:29 | INFO     | load_to_s3 | File /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv uploaded to s3://real-estate-scraped-data/raw/raw_20260207_20260207_1126.csv
+2026-02-07 11:26:29 | INFO     | load_to_s3 | File /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv uploaded to s3://real-estate-scraped-data/transformed/transformed_20260207_20260207_1126.csv
+2026-02-07 11:26:29 | INFO     | __main__ | LOAD TO S3 COMPLETED
+
+2026-02-07 11:26:29 | INFO     | __main__ | ETL PIPELINE COMPLETED SUCCESSFULLY
+2026-02-07 11:26:29 | INFO     | __main__ | Duration: 0:00:13 | Quality: 100.0%
+2026-02-07 11:26:29 | INFO     | __main__ | Sending success email...
+2026-02-07 11:26:29 | INFO     | email_notifier | Preparing success email notification...
+2026-02-07 11:26:29 | INFO     | email_notifier | Connecting to SMTP server: smtp.gmail.com:587
+2026-02-07 11:26:31 | INFO     | email_notifier | Email notification sent successfully to havando1802@gmail.com

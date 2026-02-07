@@ -3,7 +3,7 @@ BEGINNER TEST: Simple tests for extract functions
 NO MOCKING - Just testing basic logic
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -43,7 +43,7 @@ def test_add_timestamp():
     df = pd.DataFrame(data)
 
     # Act: Add timestamp
-    df["extracted_at"] = datetime.now()
+    df["extracted_at"] = datetime.now(timezone.utc)
 
     # Assert: Column exists
     assert "extracted_at" in df.columns

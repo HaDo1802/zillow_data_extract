@@ -1,5 +1,5 @@
 from airflow.decorators import dag, task
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 import pandas as pd
 from typing import Dict, Any
@@ -47,7 +47,7 @@ def real_estate_etl_pipeline():
     def extract_zillow(paths: Dict[str, str]) -> Dict[str, Any]:
         import os
         import logging
-        from datetime import datetime
+        from datetime import datetime, timezone
         from etl.extract import fetch_all_locations
 
         log = logging.getLogger("airflow.task")
@@ -73,7 +73,7 @@ def real_estate_etl_pipeline():
                     int(df["zpid"].nunique()) if "zpid" in df.columns else 0
                 ),
                 "file_path": str(output_file),
-                "extraction_timestamp": datetime.now().isoformat(),
+                "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception:
@@ -200,7 +200,7 @@ def real_estate_etl_pipeline():
         from etl.load_to_s3 import load_to_s3
 
         bucket = "real-estate-scraped-data"
-        etl_run_id = datetime.now().strftime("%Y%m%d_%H%M")
+        etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
         snapshot_date = datetime.fromisoformat(extraction_metrics["extraction_timestamp"]).strftime("%Y%m%d")
         raw_file_path = extraction_metrics["file_path"]
         transformed_file_path = transform_metrics["file_path"]
@@ -238,7 +238,7 @@ def real_estate_etl_pipeline():
             "quality_score": f"{quality_metrics['quality_score']}%",
             "postgres_rows": postgres_metrics["postgres_rows"],
             "s3_uploaded": "✅" if s3_metrics["s3_success"] else "❌",
-            "end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         notifier = EmailNotifier()

@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import boto3
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,8 +35,8 @@ def load_to_s3(file_path, bucket_name, s3_key):
 if __name__ == "__main__":
     # Example usage
     running_env = config.ENV_TYPE
-    etl_run_id = datetime.now().strftime("%Y%m%d_%H%M")
-    snapshot_date = datetime.now().strftime("%Y%m%d")
+    etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
     bucket_name = "real-estate-scraped-data"
     if running_env == "local":
         raw_file_path = "data/raw/raw_latest.csv"

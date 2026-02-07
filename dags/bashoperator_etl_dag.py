@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -25,10 +25,8 @@ def send_success_notification(**context):
         else:
             # Fallback: calculate from data interval
             start_time = context["data_interval_start"]
-            # Convert to string and back to datetime to make timezone-naive
-            start_naive = datetime.strptime(start_time.strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S")
-            end_naive = datetime.now()
-            duration = str(end_naive - start_naive).split(".")[0]
+            end_time = datetime.now(timezone.utc)
+            duration = str(end_time - start_time).split(".")[0]
 
         details = {
             "records_processed": records_processed,
@@ -38,7 +36,7 @@ def send_success_notification(**context):
             "execution_date": context["ds"],
             "task_instance": context["task_instance"].task_id,
             "dag_run_id": context["dag_run"].run_id,
-            "execution_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "execution_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         notifier = EmailNotifier()
@@ -67,7 +65,7 @@ def send_failure_notification(context):
             "dag_id": context["dag"].dag_id,
             "execution_date": context["ds"],
             "log_url": getattr(task_instance, "log_url", "N/A"),
-            "failure_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "failure_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "dag_run_id": context["dag_run"].run_id,
             "try_number": task_instance.try_number,
         }
