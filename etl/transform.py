@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 from datetime import datetime, timezone
@@ -9,6 +10,30 @@ logger = get_logger(__name__)
 
 DEFAULT_INPUT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "raw", "raw_latest.csv"))
 DEFAULT_OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "transformed"))
+DISTRICT_MAPPING_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "utils", "district_map.csv"))
+
+
+def load_district_mapping(file_path: str = DISTRICT_MAPPING_FILE) -> dict:
+    """Load district mapping from CSV (keyword,district)."""
+    if not os.path.exists(file_path):
+        logger.warning("District mapping file not found, using defaults: %s", file_path)
+        raise FileNotFoundError(f"District mapping file not found: {file_path}")
+
+    mapping = {}
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                keyword = (row.get("keyword") or "").strip().lower()
+                district = (row.get("district") or "").strip()
+                if keyword and district:
+                    mapping[keyword] = district
+    except Exception as e:
+        logger.warning("Failed to load district mapping, using defaults: %s", str(e))
+        raise e
+
+    return mapping 
+
 
 
 def extract_address_components(address: str) -> dict:
@@ -98,26 +123,10 @@ def extract_vegas_district(address: str, city: str) -> str:
         return "Unknown"
 
     address_lower = address.lower()
-    # Map common Vegas areas
-    district_mapping = {
-        "summerlin": "Summerlin",
-        "henderson": "Henderson",
-        "north las vegas": "North Las Vegas",
-        "enterprise": "Enterprise",
-        "spring valley": "Spring Valley",
-        "green valley": "Green Valley",
-        "centennial": "Centennial",
-        "anthem": "Anthem",
-        "mountains edge": "Mountains Edge",
-        "downtown": "Downtown Las Vegas",
-        "strip": "The Strip",
-        "fremont": "Downtown Las Vegas",
-        "paradise": "Paradise",
-        "winchester": "Winchester",
-    }
+    DISTRICT_MAPPING = load_district_mapping()
 
     # Check address for district keywords
-    for keyword, district in district_mapping.items():
+    for keyword, district in DISTRICT_MAPPING.items():
         if keyword in address_lower:
             return district
 

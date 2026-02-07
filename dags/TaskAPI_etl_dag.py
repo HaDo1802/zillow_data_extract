@@ -24,7 +24,7 @@ def real_estate_etl_pipeline():
     """
     Real Estate ETL Pipeline using TaskFlow API
 
-    Flow: Extract -> Validate -> Transform -> Quality Check -> Load (Postgres + S3) -> Notify
+    Flow: Extract -> Validate -> Transform -> Quality Check -> Load (S3) -> Notify
     """
 
     @task()
@@ -168,53 +168,23 @@ def real_estate_etl_pipeline():
         }
 
     @task()
-    def load_postgres(transform_metrics: Dict[str, any]) -> Dict[str, int]:
-        """Load data to PostgreSQL."""
-        from etl.load import load_csv
-        import psycopg2
-        from utils.config import config
-
-        # Load data
-        load_csv(csv_file=transform_metrics["file_path"])
-
-        # Verify
-        conn = psycopg2.connect(**config.get_db_config())
-        cur = conn.cursor()
-        cur.execute(
-            f"SELECT COUNT(*) FROM {config.DEFAULT_SCHEMA}.properties_data_history"
-        )
-        total_rows = cur.fetchone()[0]
-        cur.close()
-        conn.close()
-
-        return {
-            "postgres_rows": total_rows,
-            "records_loaded": transform_metrics["records_transformed"],
-        }
-
-    @task()
     def load_s3(
         transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]
-    ) -> Dict[str, bool]:
+    ) -> Dict[str, any]:
         """Load data to S3."""
-        from etl.load_to_s3 import load_to_s3
+        from etl.load import load_files_to_s3
 
         bucket = "real-estate-scraped-data"
-        etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
-        snapshot_date = datetime.fromisoformat(extraction_metrics["extraction_timestamp"]).strftime("%Y%m%d")
         raw_file_path = extraction_metrics["file_path"]
         transformed_file_path = transform_metrics["file_path"]
 
         try:
-            load_to_s3(
-                raw_file_path, bucket, f"raw/raw_{snapshot_date}_{etl_run_id}.csv"
+            results = load_files_to_s3(
+                raw_file=raw_file_path,
+                transformed_file=transformed_file_path,
+                bucket_name=bucket,
             )
-            load_to_s3(
-                transformed_file_path,
-                bucket,
-                f"transformed/transformed_{snapshot_date}_{etl_run_id}.csv",
-            )
-            return {"s3_success": True, "bucket": bucket}
+            return {"s3_success": True, "bucket": bucket, "results": results}
         except Exception as e:
             # Log but don't fail
             print(f"S3 upload failed: {e}")
@@ -225,7 +195,6 @@ def real_estate_etl_pipeline():
         extraction_metrics: Dict,
         transform_metrics: Dict,
         quality_metrics: Dict,
-        postgres_metrics: Dict,
         s3_metrics: Dict,
     ):
         """Send success notification with all metrics."""
@@ -236,7 +205,6 @@ def real_estate_etl_pipeline():
             "records_loaded": transform_metrics["records_transformed"],
             "transformation_efficiency": f"{transform_metrics['transformation_efficiency']}%",
             "quality_score": f"{quality_metrics['quality_score']}%",
-            "postgres_rows": postgres_metrics["postgres_rows"],
             "s3_uploaded": "✅" if s3_metrics["s3_success"] else "❌",
             "end_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -253,12 +221,11 @@ def real_estate_etl_pipeline():
     transformation = transform_data(extraction, paths)
     quality = quality_check(transformation)
 
-    # Parallel loads
-    postgres = load_postgres(transformation)
+    # Load to S3
     s3 = load_s3(transformation, extraction)
 
     # Notification depends on all tasks
-    notify = send_notification(extraction, transformation, quality, postgres, s3)
+    notify = send_notification(extraction, transformation, quality, s3)
 
     # Dependencies
     (
@@ -267,7 +234,6 @@ def real_estate_etl_pipeline():
         >> validation
         >> transformation
         >> quality
-        >> postgres
         >> s3
         >> notify
     )

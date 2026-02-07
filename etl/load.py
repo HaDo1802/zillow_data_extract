@@ -2,17 +2,18 @@ import os
 import sys
 from datetime import datetime, timezone
 
-import pandas as pd
-import psycopg2
-from psycopg2 import sql
-
-
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-from logger import get_logger  
-from utils.config import config 
+
+import boto3
+from dotenv import load_dotenv
+
+from logger import get_logger
+from utils.config import config
+
 # Initialize logger for this module
 logger = get_logger(__name__)
+load_dotenv()
 
 DEFAULT_FILE = os.path.abspath(
     os.path.join(
@@ -24,201 +25,135 @@ DEFAULT_FILE = os.path.abspath(
     )
 )
 
-HISTORY_TABLE = "properties_data_history"
-
-ORDERED_COLS = [
-    "zillow_property_id",
-    "snapshot_date",
-    "price",
-    "priceChange",
-    "bedrooms",
-    "bathrooms",
-    "livingArea",
-    "lotAreaValue",
-    "Normalized_lotAreaValue",
-    "propertyType",
-    "listingStatus",
-    "rentZestimate",
-    "zestimate",
-    "street_address",
-    "city",
-    "state",
-    "zip_code",
-    "vegas_district",
-    "latitude",
-    "longitude",
-    "daysOnZillow",
-    "has3DModel",
-    "hasImage",
-    "hasVideo",
-    "is_fsba",
-    "is_open_house",
-    "extracted_at",
-]
-
-
-def get_connection():
-    """Connect to Postgres using config with environment auto-detection."""
-
-    db_config = config.get_db_config()
-    logger.info(
-        f"Connecting to PostgreSQL ({config.ENV_TYPE}): "
-        f"{db_config['host']}:{db_config['port']}/{db_config['dbname']} "
-        f"as {db_config['user']}"
+DEFAULT_BUCKET = os.getenv("S3_BUCKET", "real-estate-scraped-data")
+DEFAULT_TRANSFORMED_PREFIX = os.getenv("S3_TRANSFORMED_PREFIX", "transformed")
+DEFAULT_RAW_PREFIX = os.getenv("S3_RAW_PREFIX", "raw")
+DEFAULT_RAW_FILE = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "data",
+        "raw",
+        "raw_latest.csv",
     )
-
-    return psycopg2.connect(**db_config)
-
-
-def ensure_schema_and_objects(conn):
-    """Create schema, tables, and views if they don't exist."""
-    cur = conn.cursor()
-    # Create schema
-    logger.info(f"Creating schema if not exists: {config.DEFAULT_SCHEMA}")
-    cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(config.DEFAULT_SCHEMA)))
-
-    # Create history table
-    logger.info(f"Creating table if not exists: {config.DEFAULT_SCHEMA}.{HISTORY_TABLE}")
-    cur.execute(
-        sql.SQL(
-            f"""
-        CREATE TABLE IF NOT EXISTS {config.DEFAULT_SCHEMA}.{HISTORY_TABLE} (
-            zillow_property_id BIGINT,
-            snapshot_date DATE,
-
-            price DOUBLE PRECISION,
-            priceChange DOUBLE PRECISION,
-            bedrooms INTEGER,
-            bathrooms DOUBLE PRECISION,
-            livingArea DOUBLE PRECISION,
-            lotAreaValue DOUBLE PRECISION,
-            Normalized_lotAreaValue DOUBLE PRECISION,
-            propertyType TEXT,
-            listingStatus TEXT,
-
-            rentZestimate DOUBLE PRECISION,
-            zestimate DOUBLE PRECISION,
-
-            street_address TEXT,
-            city TEXT,
-            state TEXT,
-            zip_code TEXT,
-            vegas_district TEXT,
-            latitude DOUBLE PRECISION,
-            longitude DOUBLE PRECISION,
-
-            daysOnZillow INTEGER,
-            has3DModel BOOLEAN,
-            hasImage BOOLEAN,
-            hasVideo BOOLEAN,
-            is_fsba BOOLEAN,
-            is_open_house BOOLEAN,
-            extracted_at TIMESTAMPTZ,
-            loaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        );
-        """
-        )
-    )
-
-    conn.commit()
-    cur.close()
-    logger.info("Schema and objects verified/created")
+)
 
 
-def load_csv(csv_file=DEFAULT_FILE):
-    """Load transformed CSV data into PostgreSQL history table."""
+def load_to_s3(file_path: str, bucket_name: str, s3_key: str) -> None:
+    """Uploads a file to an S3 bucket."""
+    s3 = boto3.client("s3")
+    try:
+        s3.upload_file(file_path, bucket_name, s3_key)
+        logger.info("File %s uploaded to s3://%s/%s", file_path, bucket_name, s3_key)
+    except Exception as e:
+        logger.error("Failed to upload %s to S3: %s", file_path, e)
+        raise
 
-    logger.info("STARTING DATA LOAD TO POSTGRESQL")
+
+def _build_s3_key(prefix: str, basename: str, snapshot_date: str, etl_run_id: str) -> str:
+    # Include snapshot_date + etl_run_id so multiple same-day runs are traceable for audit/backfills.
+    return f"{prefix}/{basename}_{snapshot_date}_{etl_run_id}.csv"
+
+
+def load_csv(
+    csv_file=DEFAULT_FILE,
+    bucket_name: str = DEFAULT_BUCKET,
+    prefix: str = DEFAULT_TRANSFORMED_PREFIX,
+):
+    """
+    Upload transformed CSV data to S3.
+
+    Postgres loading is handled downstream, so this step only stages the file in S3.
+    """
+    logger.info("STARTING DATA LOAD TO S3 (POSTGRES LOAD DISABLED IN THIS PROJECT)")
     logger.info(f"Loading file: {csv_file}")
 
-    conn = get_connection()
-    cur = conn.cursor()
+    if not os.path.exists(csv_file):
+        logger.error(f"CSV file not found: {csv_file}")
+        raise FileNotFoundError(f"CSV file not found: {csv_file}")
 
-    try:
-        # Ensure schema and tables exist
-        ensure_schema_and_objects(conn)
+    etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
+    s3_key = _build_s3_key(
+        prefix=prefix,
+        basename="transformed",
+        snapshot_date=snapshot_date,
+        etl_run_id=etl_run_id,
+    )
 
-        # Read CSV file
-        if not os.path.exists(csv_file):
-            logger.error(f"CSV file not found: {csv_file}")
-            raise FileNotFoundError(f"CSV file not found: {csv_file}")
+    load_to_s3(csv_file, bucket_name, s3_key)
 
-        df = pd.read_csv(csv_file)[ORDERED_COLS]
-        df["snapshot_date"] = pd.to_datetime(df["snapshot_date"].astype(str), format="%Y%m%d").dt.date
-        logger.info(f"Loaded {len(df)} records from CSV")
-        logger.info(f"Columns: {len(df.columns)}")
+    logger.info("S3 upload completed successfully")
+    logger.info(f"S3 destination: s3://{bucket_name}/{s3_key}")
+    return {"file_path": csv_file, "bucket": bucket_name, "s3_key": s3_key}
 
-        df = df.where(pd.notna(df), None)
-        df["loaded_at"] = datetime.now(timezone.utc)
-        # Write to temporary file
-        tmp_file = "/tmp/property_history_load.csv"
-        df.to_csv(tmp_file, index=False)
-        logger.info(f"Created temporary file: {tmp_file}")
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            cur.copy_expert(
-                sql.SQL("COPY {}.{} FROM STDIN WITH CSV HEADER").format(
-                    sql.Identifier(config.DEFAULT_SCHEMA), sql.Identifier(HISTORY_TABLE)
-                ),
-                f,
-            )
 
-        conn.commit()
+def load_files_to_s3(
+    raw_file: str = DEFAULT_RAW_FILE,
+    transformed_file: str = DEFAULT_FILE,
+    bucket_name: str = DEFAULT_BUCKET,
+    raw_prefix: str = DEFAULT_RAW_PREFIX,
+    transformed_prefix: str = DEFAULT_TRANSFORMED_PREFIX,
+):
+    """Upload raw and transformed CSV files to S3 in one step."""
+    logger.info("STARTING DATA LOAD TO S3 (RAW + TRANSFORMED)")
 
-        cur.execute(
-            sql.SQL("SELECT COUNT(*) FROM {}.{}").format(sql.Identifier(config.DEFAULT_SCHEMA), sql.Identifier(HISTORY_TABLE))
+    etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
+    results = {}
+
+    if raw_file and os.path.exists(raw_file):
+        raw_key = _build_s3_key(
+            prefix=raw_prefix,
+            basename="raw",
+            snapshot_date=snapshot_date,
+            etl_run_id=etl_run_id,
         )
-        total_rows = cur.fetchone()[0]
+        load_to_s3(raw_file, bucket_name, raw_key)
+        results["raw"] = {"file_path": raw_file, "bucket": bucket_name, "s3_key": raw_key}
+    else:
+        logger.warning("Raw file not found or not provided, skipping: %s", raw_file)
 
-        logger.info("COPY completed successfully")
-        logger.info(f"Total rows in history table: {total_rows}")
+    if transformed_file and os.path.exists(transformed_file):
+        transformed_key = _build_s3_key(
+            prefix=transformed_prefix,
+            basename="transformed",
+            snapshot_date=snapshot_date,
+            etl_run_id=etl_run_id,
+        )
+        load_to_s3(transformed_file, bucket_name, transformed_key)
+        results["transformed"] = {
+            "file_path": transformed_file,
+            "bucket": bucket_name,
+            "s3_key": transformed_key,
+        }
+    else:
+        logger.warning("Transformed file not found or not provided, skipping: %s", transformed_file)
 
-    except FileNotFoundError as e:
-        conn.rollback()
-        logger.error(f"File not found error: {str(e)}")
-        raise
-    except psycopg2.Error as e:
-        conn.rollback()
-        logger.error(f"Database error: {str(e)}", exc_info=True)
-        raise
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Unexpected error during load: {str(e)}", exc_info=True)
-        raise
-    finally:
-        cur.close()
-        conn.close()
-        logger.info("Database connection closed")
+    if not results:
+        raise FileNotFoundError("No files uploaded. Provide valid raw/transformed file paths.")
+
+    logger.info("S3 uploads completed successfully")
+    return results
 
 
 if __name__ == "__main__":
     logger.info(f"RUNNING IN {config.ENV_TYPE.upper()} ENVIRONMENT")
-
-    # Validate required environment variables based on environment
-    db_config = config.get_db_config()
-
     logger.info("\nConfiguration:")
-    logger.info(f"  Host: {db_config['host']}")
-    logger.info(f"  Database: {db_config['dbname']}")
-    logger.info(f"  User: {db_config['user']}")
-    logger.info(f"  Port: {db_config['port']}")
-    logger.info(f"  Schema: {config.DEFAULT_SCHEMA}")
-    logger.info(f"  Table: {HISTORY_TABLE}")
-    logger.info(f"  Input file: {DEFAULT_FILE}")
+    logger.info(f"  Raw file: {DEFAULT_RAW_FILE}")
+    logger.info(f"  Transformed file: {DEFAULT_FILE}")
+    logger.info(f"  S3 bucket: {DEFAULT_BUCKET}")
+    logger.info(f"  S3 raw prefix: {DEFAULT_RAW_PREFIX}")
+    logger.info(f"  S3 transformed prefix: {DEFAULT_TRANSFORMED_PREFIX}")
+    logger.info("  Postgres load: disabled (handled downstream)")
 
     try:
-        conn = get_connection()
-        conn.close()
-        logger.info("Database connection successful!\n")
-
         start_time = datetime.now(timezone.utc)
-        load_csv()
+        load_files_to_s3()
         duration = datetime.now(timezone.utc) - start_time
 
         logger.info("DATA LOAD COMPLETED SUCCESSFULLY")
         logger.info(f"Duration: {duration}")
-        logger.info(f"Schema: {config.DEFAULT_SCHEMA}")
-        logger.info(f"History table: {HISTORY_TABLE}")
-        logger.info("\nQuery the data with:")
 
     except Exception as e:
         logger.error("DATA LOAD FAILED")

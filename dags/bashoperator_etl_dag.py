@@ -15,7 +15,7 @@ def send_success_notification(**context):
     """Send success notification with pipeline metrics."""
     try:
         # Get pipeline metrics from XCom or calculate
-        records_processed = context["task_instance"].xcom_pull(task_ids="upload_cleaned_data_to_postgres") or "Unknown"
+        records_processed = context["task_instance"].xcom_pull(task_ids="upload_cleaned_data_to_s3") or "Unknown"
         #records_processed_s3 = context["task_instance"].xcom_pull(task_ids="load_to_s3") or "Unknown"
         #records_processed = f"Postgres: {records_processed_postgres}"
         # Calculate duration using task instance timing
@@ -139,18 +139,11 @@ with DAG(
         bash_command="echo '✅ Cleaned data ready for loading'",
     )
 
-    # 4. Upload cleaned data into Postgres
-    upload_cleaned_data_to_postgres = BashOperator(
-        task_id="upload_cleaned_data_to_postgres",
+    # 4. Upload cleaned data to S3
+    upload_cleaned_data_to_s3 = BashOperator(
+        task_id="upload_cleaned_data_to_s3",
         bash_command="python /opt/airflow/etl/load.py",
         do_xcom_push=True,  # Enable XCom capture
-    )
-    # 5. Load to s3
-    load_to_s3 = BashOperator(
-        task_id="load_to_s3",
-        bash_command="python /opt/airflow/etl/load_to_s3.py",
-        do_xcom_push=True,
-        
     )
     # 5. Send success email
     success_email = PythonOperator(
@@ -167,7 +160,6 @@ with DAG(
     >> note
     >> clean_data
     >> note_clean_data
-    >> load_to_s3
-    >> upload_cleaned_data_to_postgres
+    >> upload_cleaned_data_to_s3
     >> success_email
 )

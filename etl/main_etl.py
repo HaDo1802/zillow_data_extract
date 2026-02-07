@@ -8,10 +8,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from email_notifier import EmailNotifier  # noqa: E402
 from extract import fetch_all_locations  # noqa: E402
-from load import load_csv  # noqa: E402
+from load import load_files_to_s3  # noqa: E402
 from logger import get_logger  # noqa: E402
 from transform import main_transform  # noqa: E402
-from load_to_s3 import load_to_s3  # noqa: E402
 
 logger = get_logger(__name__)
 
@@ -90,26 +89,9 @@ def run_etl_pipeline(
         logger.info("TRANSFORM COMPLETED")
 
         logger.info("STAGE 3: LOAD")
-        load_csv(csv_file=latest_file)
+        load_files_to_s3(raw_file=raw_latest, transformed_file=latest_file, bucket_name=s3_bucket)
         details["records_loaded"] = len(df_transformed)
         logger.info("LOAD COMPLETED\n")
-
-        logger.info("Load to S3")
-        snapshot_date = start_time.strftime("%Y%m%d")
-        raw_s3_key = f"raw/raw_{snapshot_date}_{etl_run_id}.csv"
-        transformed_s3_key = f"transformed/transformed_{snapshot_date}_{etl_run_id}.csv"
-
-        load_to_s3(
-            file_path=raw_latest,
-            bucket_name=s3_bucket,
-            s3_key=raw_s3_key,
-        )
-        load_to_s3(
-            file_path=latest_file,
-            bucket_name=s3_bucket,
-            s3_key=transformed_s3_key,
-        )
-        logger.info("LOAD TO S3 COMPLETED\n")
 
         end_time = datetime.now(timezone.utc)
         duration = end_time - start_time
