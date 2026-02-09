@@ -6,6 +6,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, "etl"))
 
+import transform as transform_module  # noqa: E402
 from transform import (  # noqa: E402
     convert_unix_timestamp,
     extract_address_components,
@@ -94,16 +95,22 @@ def test_none_area_value():
     assert result is None
 
 
-def test_summerlin_district():
+def test_summerlin_district(monkeypatch):
     """Test that Summerlin is detected."""
+    monkeypatch.setattr(
+        transform_module,
+        "load_district_mapping",
+        lambda: {"summerlin": "Summerlin"},
+    )
     address = "123 Main St, Summerlin, NV 89135"
     result = extract_vegas_district(address, "Summerlin")
 
     assert result == "Summerlin"
 
 
-def test_fallback_to_city():
+def test_fallback_to_city(monkeypatch):
     """Test fallback when no district keyword found."""
+    monkeypatch.setattr(transform_module, "load_district_mapping", lambda: {})
     address = "999 Unknown St"
     city = "Las Vegas"
 
