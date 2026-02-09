@@ -118,7 +118,7 @@ jobs:
   run-etl-pipeline:
     runs-on: ubuntu-latest
     name: Execute Real Estate ETL Pipeline
-    #needs: [format-and-lint, unit-test, docker-build]
+    needs: [format-and-lint, unit-test, docker-build]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_full_pipeline == 'true'))
 
     steps:
@@ -193,7 +193,7 @@ jobs:
           fi
 
           echo "☁️ Uploading files to s3://${S3_BUCKET}"
-          export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH}"
+          export PYTHONPATH="${GITHUB_WORKSPACE}/etl:${GITHUB_WORKSPACE}:${PYTHONPATH}"
           python - <<'PY'
           import os
           from etl.load import load_files_to_s3
