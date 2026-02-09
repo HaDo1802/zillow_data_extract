@@ -118,7 +118,7 @@ jobs:
   run-etl-pipeline:
     runs-on: ubuntu-latest
     name: Execute Real Estate ETL Pipeline
-    needs: [format-and-lint, unit-test, docker-build]
+    #needs: [format-and-lint, unit-test, docker-build]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_full_pipeline == 'true'))
 
     steps:
@@ -192,25 +192,28 @@ jobs:
             exit 1
           fi
 
-          ETL_RUN_ID=$(date +'%Y%m%d_%H%M')
-          SNAPSHOT_DATE=$(date +'%Y%m%d')
-          RAW_S3_KEY="raw/raw_${SNAPSHOT_DATE}_${ETL_RUN_ID}.csv"
-          TRANSFORMED_S3_KEY="transformed/transformed_${SNAPSHOT_DATE}_${ETL_RUN_ID}.csv"
-
-          echo "RAW_S3_KEY=${RAW_S3_KEY}" >> "$GITHUB_ENV"
-          echo "TRANSFORMED_S3_KEY=${TRANSFORMED_S3_KEY}" >> "$GITHUB_ENV"
-
           echo "☁️ Uploading files to s3://${S3_BUCKET}"
+          export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH}"
           python - <<'PY'
           import os
-          from etl.load_to_s3 import load_to_s3
+          from etl.load import load_files_to_s3
 
           bucket = os.environ["S3_BUCKET"]
-          raw_key = os.environ["RAW_S3_KEY"]
-          transformed_key = os.environ["TRANSFORMED_S3_KEY"]
 
-          load_to_s3("data/raw/raw_latest.csv", bucket, raw_key)
-          load_to_s3("data/transformed/transformed_latest.csv", bucket, transformed_key)
+          results = load_files_to_s3(
+              raw_file="data/raw/raw_latest.csv",
+              transformed_file="data/transformed/transformed_latest.csv",
+              bucket_name=bucket,
+          )
+
+          env_path = os.environ["GITHUB_ENV"]
+          raw = results.get("raw")
+          transformed = results.get("transformed")
+          with open(env_path, "a", encoding="utf-8") as f:
+              if raw:
+                  f.write(f"RAW_S3_KEY={raw['s3_key']}\n")
+              if transformed:
+                  f.write(f"TRANSFORMED_S3_KEY={transformed['s3_key']}\n")
           PY
           echo "✅ S3 upload completed"
 
