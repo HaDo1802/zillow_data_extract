@@ -33,3 +33,7 @@ notebook.ipynb
 
 .ruff_cache/
 .pytest_cache/
+.secrets
+.env
+.input
+.vars

@@ -103,7 +103,7 @@ def fetch_zillow(location, max_pages=2):
         raise
 
 
-def fetch_all_locations(locations=None, max_pages=2):
+def fetch_all_locations(locations=None, max_pages=5):
     """
     Fetch data from all configured locations and combine into single file.
 
@@ -192,7 +192,7 @@ def fetch_all_locations(locations=None, max_pages=2):
 if __name__ == "__main__":
     logger.info("Starting Zillow data extraction script:")
     start_time = datetime.now(timezone.utc)
-    df_result = fetch_all_locations(["Las Vegas, NV"], 2)
+    df_result = fetch_all_locations(["Las Vegas, NV"], 5)
     duration = datetime.now(timezone.utc) - start_time
     if not df_result.empty:
         logger.info("\n" + "=" * 70)
