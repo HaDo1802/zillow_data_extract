@@ -17,7 +17,7 @@ def load_district_mapping(file_path: str = DISTRICT_MAPPING_FILE) -> dict:
     """Load district mapping from CSV (keyword,district)."""
     if not os.path.exists(file_path):
         logger.warning("District mapping file not found, using defaults: %s", file_path)
-        raise FileNotFoundError(f"District mapping file not found: {file_path}")
+        return {}
 
     mapping = {}
     try:
@@ -30,9 +30,9 @@ def load_district_mapping(file_path: str = DISTRICT_MAPPING_FILE) -> dict:
                     mapping[keyword] = district
     except Exception as e:
         logger.warning("Failed to load district mapping, using defaults: %s", str(e))
-        raise e
+        return {}
 
-    return mapping 
+    return mapping
 
 
 
@@ -268,8 +268,8 @@ def main_transform(input_file=DEFAULT_INPUT, output_dir=DEFAULT_OUTPUT_DIR):
 
         return df_final, timestamped_file, latest_file
 
-    except FileNotFoundError:
-        logger.error(f"Input file not found: {input_file}")
+    except FileNotFoundError as e:
+        logger.error(str(e))
         raise
     except Exception as e:
         logger.error(f"Transformation failed: {str(e)}", exc_info=True)

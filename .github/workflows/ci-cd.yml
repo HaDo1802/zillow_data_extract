@@ -1,8 +1,8 @@
 name: Real Estate ETL Pipeline CI/CD
 
 on:
-  #schedule:
-    #- cron: "0 6 * * *" # Daily at 6 AM UTC
+  schedule:
+    - cron: "0 6 * * *" # Daily at 6 AM UTC
   push:
     branches:
       - main
@@ -71,6 +71,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pandas pytest
+
+      - name: Verify district map exists
+        run: |
+          if [ ! -f "utils/district_map.csv" ]; then
+            echo "❌ Missing utils/district_map.csv"
+            exit 1
+          fi
 
       - name: Run unit tests
         run: |
