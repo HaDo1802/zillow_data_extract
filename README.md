@@ -49,7 +49,7 @@ This project implements a Extract-Transform-Load (ETL) pipeline for real estate 
 Zillow API --> Raw CSV --> S3 --> (Downstream Postgres + Transformations) --> Email Notification
 ```
 
-![Architecture](image/architecture_udpate.png)
+![Architecture](image/architecture_update.png)
 
 ### 1. Data Source
 
