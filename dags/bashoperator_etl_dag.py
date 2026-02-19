@@ -15,7 +15,10 @@ def send_success_notification(**context):
     """Send success notification with pipeline metrics."""
     try:
         # Get pipeline metrics from XCom or calculate
-        records_processed = context["task_instance"].xcom_pull(task_ids="upload_cleaned_data_to_s3") or "Unknown"
+        records_processed = (
+            context["task_instance"].xcom_pull(task_ids="load_cleaned_data_to_supabase")
+            or "Unknown"
+        )
         #records_processed_s3 = context["task_instance"].xcom_pull(task_ids="load_to_s3") or "Unknown"
         #records_processed = f"Postgres: {records_processed_postgres}"
         # Calculate duration using task instance timing
@@ -139,9 +142,9 @@ with DAG(
         bash_command="echo '✅ Cleaned data ready for loading'",
     )
 
-    # 4. Upload cleaned data to S3
-    upload_cleaned_data_to_s3 = BashOperator(
-        task_id="upload_cleaned_data_to_s3",
+    # 4. Load cleaned data to Supabase
+    load_cleaned_data_to_supabase = BashOperator(
+        task_id="load_cleaned_data_to_supabase",
         bash_command="python /opt/airflow/etl/load.py",
         do_xcom_push=True,  # Enable XCom capture
     )
@@ -160,6 +163,6 @@ with DAG(
     >> note
     >> clean_data
     >> note_clean_data
-    >> upload_cleaned_data_to_s3
+    >> load_cleaned_data_to_supabase
     >> success_email
 )

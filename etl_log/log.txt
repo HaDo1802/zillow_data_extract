@@ -678,3 +678,46 @@ Configuration:
 2026-02-07 15:06:01 | INFO     | __main__ | S3 uploads completed successfully
 2026-02-07 15:06:01 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
 2026-02-07 15:06:01 | INFO     | __main__ | Duration: 0:00:01.008661
+2026-02-18 21:20:48 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-02-18 21:20:48 | INFO     | __main__ | 
+Configuration:
+2026-02-18 21:20:48 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-18 21:20:48 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-18 21:20:48 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-02-18 21:20:48 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-02-18 21:20:48 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-02-18 21:20:48 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-18 21:20:48 | ERROR    | __main__ | DATA LOAD FAILED
+2026-02-18 21:20:48 | ERROR    | __main__ | Error: Missing Supabase Storage credentials: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+2026-02-18 22:20:50 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-02-18 22:20:50 | INFO     | __main__ | 
+Configuration:
+2026-02-18 22:20:50 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-18 22:20:50 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-18 22:20:50 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-02-18 22:20:50 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-02-18 22:20:50 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-02-18 22:20:50 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-18 22:20:50 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv to Supabase Storage: real-estate-data/raw/raw_20260219_20260219_0620.csv
+2026-02-18 22:20:51 | INFO     | __main__ | Supabase Storage upload successful for raw/raw_20260219_20260219_0620.csv
+2026-02-18 22:20:51 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv to Supabase Storage: real-estate-data/transformed/transformed_20260219_20260219_0620.csv
+2026-02-18 22:20:51 | INFO     | __main__ | Supabase Storage upload successful for transformed/transformed_20260219_20260219_0620.csv
+2026-02-18 22:20:51 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-02-18 22:20:51 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-02-18 22:20:51 | INFO     | __main__ | Duration: 0:00:00.897452
+2026-02-18 22:22:06 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-02-18 22:22:06 | INFO     | __main__ | 
+Configuration:
+2026-02-18 22:22:06 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-18 22:22:06 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-18 22:22:06 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-02-18 22:22:06 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-02-18 22:22:06 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-02-18 22:22:06 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-18 22:22:06 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv to Supabase Storage: real-estate-data/raw/raw_20260219_20260219_0622.csv
+2026-02-18 22:22:07 | INFO     | __main__ | Supabase Storage upload successful for raw/raw_20260219_20260219_0622.csv
+2026-02-18 22:22:07 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv to Supabase Storage: real-estate-data/transformed/transformed_20260219_20260219_0622.csv
+2026-02-18 22:22:07 | INFO     | __main__ | Supabase Storage upload successful for transformed/transformed_20260219_20260219_0622.csv
+2026-02-18 22:22:07 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-02-18 22:22:07 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-02-18 22:22:07 | INFO     | __main__ | Duration: 0:00:00.878864

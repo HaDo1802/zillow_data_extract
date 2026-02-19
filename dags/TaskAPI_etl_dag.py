@@ -24,7 +24,7 @@ def real_estate_etl_pipeline():
     """
     Real Estate ETL Pipeline using TaskFlow API
 
-    Flow: Extract -> Validate -> Transform -> Quality Check -> Load (S3) -> Notify
+    Flow: Extract -> Validate -> Transform -> Quality Check -> Load (Supabase) -> Notify
     """
 
     @task()
@@ -63,7 +63,7 @@ def real_estate_etl_pipeline():
                 raise ValueError("No data extracted from API (df is empty)")
 
             # IMPORTANT: actually write the file
-            # df.to_csv(output_file, index=False)
+            df.to_csv(output_file, index=False)
             log.info("Wrote raw CSV successfully: %s (rows=%s)", output_file, len(df))
 
             # JSON-safe return
@@ -168,34 +168,27 @@ def real_estate_etl_pipeline():
         }
 
     @task()
-    def load_s3(
+    def load_supabase(
         transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]
     ) -> Dict[str, any]:
-        """Load data to S3."""
-        from etl.load import load_files_to_s3
+        """Load data to Supabase."""
+        from etl.load import load_files_to_supabase
 
-        bucket = "real-estate-scraped-data"
         raw_file_path = extraction_metrics["file_path"]
         transformed_file_path = transform_metrics["file_path"]
 
-        try:
-            results = load_files_to_s3(
-                raw_file=raw_file_path,
-                transformed_file=transformed_file_path,
-                bucket_name=bucket,
-            )
-            return {"s3_success": True, "bucket": bucket, "results": results}
-        except Exception as e:
-            # Log but don't fail
-            print(f"S3 upload failed: {e}")
-            return {"s3_success": False, "error": str(e)}
+        results = load_files_to_supabase(
+            raw_file=raw_file_path,
+            transformed_file=transformed_file_path,
+        )
+        return {"supabase_success": True, "results": results}
 
     @task(trigger_rule="all_done")
     def send_notification(
         extraction_metrics: Dict,
         transform_metrics: Dict,
         quality_metrics: Dict,
-        s3_metrics: Dict,
+        supabase_metrics: Dict,
     ):
         """Send success notification with all metrics."""
         from etl.email_notifier import EmailNotifier
@@ -205,7 +198,7 @@ def real_estate_etl_pipeline():
             "records_loaded": transform_metrics["records_transformed"],
             "transformation_efficiency": f"{transform_metrics['transformation_efficiency']}%",
             "quality_score": f"{quality_metrics['quality_score']}%",
-            "s3_uploaded": "✅" if s3_metrics["s3_success"] else "❌",
+            "supabase_loaded": "✅" if supabase_metrics["supabase_success"] else "❌",
             "end_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
 
@@ -221,11 +214,11 @@ def real_estate_etl_pipeline():
     transformation = transform_data(extraction, paths)
     quality = quality_check(transformation)
 
-    # Load to S3
-    s3 = load_s3(transformation, extraction)
+    # Load to Supabase
+    supabase = load_supabase(transformation, extraction)
 
     # Notification depends on all tasks
-    notify = send_notification(extraction, transformation, quality, s3)
+    notify = send_notification(extraction, transformation, quality, supabase)
 
     # Dependencies
     (
@@ -234,7 +227,7 @@ def real_estate_etl_pipeline():
         >> validation
         >> transformation
         >> quality
-        >> s3
+        >> supabase
         >> notify
     )
 

@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from email_notifier import EmailNotifier  # noqa: E402
 from extract import fetch_all_locations  # noqa: E402
-from load import load_files_to_s3  # noqa: E402
+from load import load_files_to_supabase  # noqa: E402
 from logger import get_logger  # noqa: E402
 from transform import main_transform  # noqa: E402
 
@@ -16,7 +16,6 @@ logger = get_logger(__name__)
 
 DEFAULT_LOCATIONS = ["Las Vegas, NV"]
 DEFAULT_MAX_PAGES = 2
-DEFAULT_S3_BUCKET = "real-estate-scraped-data"
 
 
 def get_base_paths(base_dir: Optional[str] = None) -> Tuple[str, str, str]:
@@ -39,7 +38,6 @@ def get_base_paths(base_dir: Optional[str] = None) -> Tuple[str, str, str]:
 def run_etl_pipeline(
     locations: Optional[List[str]] = None,
     max_pages: int = DEFAULT_MAX_PAGES,
-    s3_bucket: str = DEFAULT_S3_BUCKET,
     base_dir: Optional[str] = None,
 ) -> Tuple[bool, Dict[str, Any]]:
     logger.info("STARTING REAL ESTATE ETL PIPELINE")
@@ -59,7 +57,6 @@ def run_etl_pipeline(
         "environment": env_type,
         "locations": target_locations,
         "max_pages": max_pages,
-        "s3_bucket": s3_bucket,
         "base_dir": resolved_base_dir,
     }
 
@@ -89,7 +86,7 @@ def run_etl_pipeline(
         logger.info("TRANSFORM COMPLETED")
 
         logger.info("STAGE 3: LOAD")
-        load_files_to_s3(raw_file=raw_latest, transformed_file=latest_file, bucket_name=s3_bucket)
+        load_files_to_supabase(raw_file=raw_latest, transformed_file=latest_file)
         details["records_loaded"] = len(df_transformed)
         logger.info("LOAD COMPLETED\n")
 
@@ -130,12 +127,6 @@ if __name__ == "__main__":
         help=f"List of locations to scrape (default: {DEFAULT_LOCATIONS})",
     )
     parser.add_argument(
-        "--s3-bucket",
-        type=str,
-        default=DEFAULT_S3_BUCKET,
-        help=f"S3 bucket name (default: {DEFAULT_S3_BUCKET})",
-    )
-    parser.add_argument(
         "--base-dir",
         type=str,
         default=None,
@@ -152,7 +143,6 @@ if __name__ == "__main__":
     success, details = run_etl_pipeline(
         locations=args.locations,
         max_pages=args.max_pages,
-        s3_bucket=args.s3_bucket,
         base_dir=args.base_dir,
     )
 

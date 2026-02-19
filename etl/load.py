@@ -1,12 +1,13 @@
 import os
 import sys
 from datetime import datetime, timezone
+from typing import Dict, Optional
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-import boto3
 from dotenv import load_dotenv
+import requests
 
 from logger import get_logger
 from utils.config import config
@@ -25,9 +26,13 @@ DEFAULT_FILE = os.path.abspath(
     )
 )
 
-DEFAULT_BUCKET = os.getenv("S3_BUCKET", "real-estate-scraped-data")
-DEFAULT_TRANSFORMED_PREFIX = os.getenv("S3_TRANSFORMED_PREFIX", "transformed")
-DEFAULT_RAW_PREFIX = os.getenv("S3_RAW_PREFIX", "raw")
+DEFAULT_SUPABASE_STORAGE_BUCKET = os.getenv(
+    "SUPABASE_STORAGE_BUCKET", "real-estate-data"
+)
+DEFAULT_SUPABASE_RAW_PREFIX = os.getenv("SUPABASE_RAW_PREFIX", "raw")
+DEFAULT_SUPABASE_TRANSFORMED_PREFIX = os.getenv(
+    "SUPABASE_TRANSFORMED_PREFIX", "transformed"
+)
 DEFAULT_RAW_FILE = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
@@ -39,101 +44,141 @@ DEFAULT_RAW_FILE = os.path.abspath(
 )
 
 
-def load_to_s3(file_path: str, bucket_name: str, s3_key: str) -> None:
-    """Uploads a file to an S3 bucket."""
-    s3 = boto3.client("s3")
-    try:
-        s3.upload_file(file_path, bucket_name, s3_key)
-        logger.info("File %s uploaded to s3://%s/%s", file_path, bucket_name, s3_key)
-    except Exception as e:
-        logger.error("Failed to upload %s to S3: %s", file_path, e)
-        raise
+def _env(*keys: str, default: Optional[str] = None) -> Optional[str]:
+    for key in keys:
+        value = os.getenv(key)
+        if value:
+            return value.strip()
+    return default
 
 
-def _build_s3_key(prefix: str, basename: str, snapshot_date: str, etl_run_id: str) -> str:
-    # Include snapshot_date + etl_run_id so multiple same-day runs are traceable for audit/backfills.
+def _get_supabase_storage_config() -> Dict[str, str]:
+    url = _env("SUPABASE_URL")
+    service_key = _env("SUPABASE_SERVICE_ROLE_KEY")  # service_role key
+
+    if not url or not service_key:
+        raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+
+    return {"url": url, "service_key": service_key}
+
+
+def _build_object_key(
+    prefix: str, basename: str, snapshot_date: str, etl_run_id: str
+) -> str:
     return f"{prefix}/{basename}_{snapshot_date}_{etl_run_id}.csv"
 
 
-def load_csv(
-    csv_file=DEFAULT_FILE,
-    bucket_name: str = DEFAULT_BUCKET,
-    prefix: str = DEFAULT_TRANSFORMED_PREFIX,
-):
-    """
-    Upload transformed CSV data to S3.
-
-    Postgres loading is handled downstream, so this step only stages the file in S3.
-    """
-    logger.info("STARTING DATA LOAD TO S3 (POSTGRES LOAD DISABLED IN THIS PROJECT)")
-    logger.info(f"Loading file: {csv_file}")
-
+def load_to_supabase_storage(
+    csv_file: str, bucket_name: str, object_key: str
+) -> Dict[str, str]:
     if not os.path.exists(csv_file):
         logger.error(f"CSV file not found: {csv_file}")
         raise FileNotFoundError(f"CSV file not found: {csv_file}")
 
+    storage = _get_supabase_storage_config()
+    url = storage["url"].rstrip("/")
+    upload_url = f"{url}/storage/v1/object/{bucket_name}/{object_key}"
+    headers = {
+        "apikey": storage["service_key"],
+        "Authorization": f"Bearer {storage['service_key']}",
+        "Content-Type": "text/csv",
+        "x-upsert": "true",
+    }
+
+    logger.info(
+        "Uploading %s to Supabase Storage: %s/%s", csv_file, bucket_name, object_key
+    )
+    with open(csv_file, "rb") as f:
+        response = requests.post(
+            upload_url,
+            headers=headers,
+            data=f,
+            timeout=120,
+        )
+
+    if response.status_code >= 400:
+        logger.error(
+            "Supabase Storage upload failed (%s): %s",
+            response.status_code,
+            response.text,
+        )
+        response.raise_for_status()
+
+    logger.info("Supabase Storage upload successful for %s", object_key)
+    return {"file_path": csv_file, "bucket": bucket_name, "object_key": object_key}
+
+
+def load_csv(
+    csv_file: str = DEFAULT_FILE,
+    bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
+    prefix: str = DEFAULT_SUPABASE_TRANSFORMED_PREFIX,
+):
+    """Upload transformed CSV data to Supabase Storage."""
+    logger.info("STARTING DATA LOAD TO SUPABASE STORAGE (TRANSFORMED)")
     etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    s3_key = _build_s3_key(
+    object_key = _build_object_key(
         prefix=prefix,
         basename="transformed",
         snapshot_date=snapshot_date,
         etl_run_id=etl_run_id,
     )
-
-    load_to_s3(csv_file, bucket_name, s3_key)
-
-    logger.info("S3 upload completed successfully")
-    logger.info(f"S3 destination: s3://{bucket_name}/{s3_key}")
-    return {"file_path": csv_file, "bucket": bucket_name, "s3_key": s3_key}
+    return load_to_supabase_storage(
+        csv_file=csv_file, bucket_name=bucket_name, object_key=object_key
+    )
 
 
-def load_files_to_s3(
+def load_files_to_supabase(
     raw_file: str = DEFAULT_RAW_FILE,
     transformed_file: str = DEFAULT_FILE,
-    bucket_name: str = DEFAULT_BUCKET,
-    raw_prefix: str = DEFAULT_RAW_PREFIX,
-    transformed_prefix: str = DEFAULT_TRANSFORMED_PREFIX,
+    bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
+    raw_prefix: str = DEFAULT_SUPABASE_RAW_PREFIX,
+    transformed_prefix: str = DEFAULT_SUPABASE_TRANSFORMED_PREFIX,
 ):
-    """Upload raw and transformed CSV files to S3 in one step."""
-    logger.info("STARTING DATA LOAD TO S3 (RAW + TRANSFORMED)")
-
+    """Upload raw and transformed CSV files into Supabase Storage."""
+    logger.info("STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)")
+    results = {}
     etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    results = {}
 
     if raw_file and os.path.exists(raw_file):
-        raw_key = _build_s3_key(
+        raw_key = _build_object_key(
             prefix=raw_prefix,
             basename="raw",
             snapshot_date=snapshot_date,
             etl_run_id=etl_run_id,
         )
-        load_to_s3(raw_file, bucket_name, raw_key)
-        results["raw"] = {"file_path": raw_file, "bucket": bucket_name, "s3_key": raw_key}
+        results["raw"] = load_to_supabase_storage(
+            csv_file=raw_file,
+            bucket_name=bucket_name,
+            object_key=raw_key,
+        )
     else:
         logger.warning("Raw file not found or not provided, skipping: %s", raw_file)
 
     if transformed_file and os.path.exists(transformed_file):
-        transformed_key = _build_s3_key(
+        transformed_key = _build_object_key(
             prefix=transformed_prefix,
             basename="transformed",
             snapshot_date=snapshot_date,
             etl_run_id=etl_run_id,
         )
-        load_to_s3(transformed_file, bucket_name, transformed_key)
-        results["transformed"] = {
-            "file_path": transformed_file,
-            "bucket": bucket_name,
-            "s3_key": transformed_key,
-        }
+        results["transformed"] = load_to_supabase_storage(
+            csv_file=transformed_file,
+            bucket_name=bucket_name,
+            object_key=transformed_key,
+        )
     else:
-        logger.warning("Transformed file not found or not provided, skipping: %s", transformed_file)
+        logger.warning(
+            "Transformed file not found or not provided, skipping: %s", transformed_file
+        )
 
     if not results:
-        raise FileNotFoundError("No files uploaded. Provide valid raw/transformed file paths.")
+        raise FileNotFoundError(
+            "No files loaded. Provide valid raw/transformed file paths."
+        )
 
-    logger.info("S3 uploads completed successfully")
+    logger.info("Supabase Storage uploads completed successfully")
     return results
 
 
@@ -142,14 +187,13 @@ if __name__ == "__main__":
     logger.info("\nConfiguration:")
     logger.info(f"  Raw file: {DEFAULT_RAW_FILE}")
     logger.info(f"  Transformed file: {DEFAULT_FILE}")
-    logger.info(f"  S3 bucket: {DEFAULT_BUCKET}")
-    logger.info(f"  S3 raw prefix: {DEFAULT_RAW_PREFIX}")
-    logger.info(f"  S3 transformed prefix: {DEFAULT_TRANSFORMED_PREFIX}")
-    logger.info("  Postgres load: disabled (handled downstream)")
+    logger.info(f"  Supabase storage bucket: {DEFAULT_SUPABASE_STORAGE_BUCKET}")
+    logger.info(f"  Supabase raw prefix: {DEFAULT_SUPABASE_RAW_PREFIX}")
+    logger.info(f"  Supabase transformed prefix: {DEFAULT_SUPABASE_TRANSFORMED_PREFIX}")
 
     try:
         start_time = datetime.now(timezone.utc)
-        load_files_to_s3()
+        load_files_to_supabase()
         duration = datetime.now(timezone.utc) - start_time
 
         logger.info("DATA LOAD COMPLETED SUCCESSFULLY")

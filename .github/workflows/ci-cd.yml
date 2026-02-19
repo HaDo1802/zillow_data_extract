@@ -237,6 +237,22 @@ jobs:
           print(f"✅ Verified: s3://{bucket}/{transformed_key}")
           PY
 
+      - name: Step 4 - Load Raw Data to Redshift
+        env:
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          REDSHIFT_WORKGROUP: ${{ secrets.REDSHIFT_WORKGROUP }}
+          REDSHIFT_DATABASE: ${{ secrets.REDSHIFT_DATABASE }}
+          REDSHIFT_SCHEMA: ${{ secrets.REDSHIFT_SCHEMA }}
+          REDSHIFT_TABLE: ${{ secrets.REDSHIFT_TABLE }}
+          REDSHIFT_SECRET_ARN: ${{ secrets.REDSHIFT_SECRET_ARN }}
+          REDSHIFT_IAM_ROLE_ARN: ${{ secrets.REDSHIFT_IAM_ROLE_ARN }}
+        run: |
+          echo "🏗️ Loading raw snapshot into Redshift..."
+          export PYTHONPATH="${GITHUB_WORKSPACE}/etl:${GITHUB_WORKSPACE}:${PYTHONPATH}"
+          python etl/load_to_redshift.py
+          echo "✅ Redshift load completed"
+
       - name: Pipeline Summary
         env:
           S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
@@ -247,6 +263,7 @@ jobs:
           echo "  ✅ Data Extraction (Zillow API)"
           echo "  ✅ Data Transformation"
           echo "  ✅ S3 Upload"
+          echo "  ✅ Redshift Load (raw.raw_property_master_data)"
 
           echo ""
           echo "📦 Local Data Files:"
