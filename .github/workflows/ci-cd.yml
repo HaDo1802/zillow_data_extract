@@ -133,7 +133,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests python-dotenv boto3
+          pip install pandas requests python-dotenv
 
       - name: Create data directories
         run: |
@@ -144,14 +144,12 @@ jobs:
         run: |
           # API Key (required for extract.py)
           echo "RAPID_API_KEY=${{ secrets.RAPID_API_KEY }}" > .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env
+          echo "SUPABASE_STORAGE_BUCKET=${{ secrets.SUPABASE_STORAGE_BUCKET }}" >> .env
+          echo "SUPABASE_RAW_PREFIX=${{ secrets.SUPABASE_RAW_PREFIX }}" >> .env
+          echo "SUPABASE_TRANSFORMED_PREFIX=${{ secrets.SUPABASE_TRANSFORMED_PREFIX }}" >> .env
           echo "✅ Environment configured for extraction + transform"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Step 1 - Extract Real Estate Data
         run: |
@@ -183,27 +181,35 @@ jobs:
             exit 1
           fi
 
-      - name: Step 3 - Upload to S3
+      - name: Step 3 - Upload to Supabase Storage
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
+          SUPABASE_RAW_PREFIX: ${{ secrets.SUPABASE_RAW_PREFIX }}
+          SUPABASE_TRANSFORMED_PREFIX: ${{ secrets.SUPABASE_TRANSFORMED_PREFIX }}
         run: |
-          if [ -z "$S3_BUCKET" ]; then
-            echo "❌ Missing required secret: S3_BUCKET_NAME"
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$SUPABASE_STORAGE_BUCKET" ]; then
+            echo "❌ Missing required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET"
             exit 1
           fi
 
-          echo "☁️ Uploading files to s3://${S3_BUCKET}"
+          echo "☁️ Uploading files to Supabase Storage bucket: ${SUPABASE_STORAGE_BUCKET}"
           export PYTHONPATH="${GITHUB_WORKSPACE}/etl:${GITHUB_WORKSPACE}:${PYTHONPATH}"
           python - <<'PY'
           import os
-          from etl.load import load_files_to_s3
+          from etl.load import load_files_to_supabase
 
-          bucket = os.environ["S3_BUCKET"]
+          bucket = os.environ["SUPABASE_STORAGE_BUCKET"]
+          raw_prefix = os.environ.get("SUPABASE_RAW_PREFIX", "raw")
+          transformed_prefix = os.environ.get("SUPABASE_TRANSFORMED_PREFIX", "transformed")
 
-          results = load_files_to_s3(
+          results = load_files_to_supabase(
               raw_file="data/raw/raw_latest.csv",
               transformed_file="data/transformed/transformed_latest.csv",
               bucket_name=bucket,
+              raw_prefix=raw_prefix,
+              transformed_prefix=transformed_prefix,
           )
 
           env_path = os.environ["GITHUB_ENV"]
@@ -211,68 +217,59 @@ jobs:
           transformed = results.get("transformed")
           with open(env_path, "a", encoding="utf-8") as f:
               if raw:
-                  f.write(f"RAW_S3_KEY={raw['s3_key']}\n")
+                  f.write(f"RAW_SUPABASE_OBJECT_KEY={raw['object_key']}\n")
               if transformed:
-                  f.write(f"TRANSFORMED_S3_KEY={transformed['s3_key']}\n")
+                  f.write(f"TRANSFORMED_SUPABASE_OBJECT_KEY={transformed['object_key']}\n")
           PY
-          echo "✅ S3 upload completed"
+          echo "✅ Supabase Storage upload completed"
 
-      - name: Verify S3 Upload
+      - name: Verify Supabase Storage Upload
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
         run: |
           python - <<'PY'
           import os
-          import boto3
+          import requests
 
-          s3 = boto3.client("s3")
-          bucket = os.environ["S3_BUCKET"]
-          raw_key = os.environ["RAW_S3_KEY"]
-          transformed_key = os.environ["TRANSFORMED_S3_KEY"]
+          base_url = os.environ["SUPABASE_URL"].rstrip("/")
+          service_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+          bucket = os.environ["SUPABASE_STORAGE_BUCKET"]
+          raw_key = os.environ["RAW_SUPABASE_OBJECT_KEY"]
+          transformed_key = os.environ["TRANSFORMED_SUPABASE_OBJECT_KEY"]
 
-          s3.head_object(Bucket=bucket, Key=raw_key)
-          s3.head_object(Bucket=bucket, Key=transformed_key)
+          headers = {
+              "apikey": service_key,
+              "Authorization": f"Bearer {service_key}",
+          }
 
-          print(f"✅ Verified: s3://{bucket}/{raw_key}")
-          print(f"✅ Verified: s3://{bucket}/{transformed_key}")
+          for key in (raw_key, transformed_key):
+              url = f"{base_url}/storage/v1/object/info/{bucket}/{key}"
+              r = requests.get(url, headers=headers, timeout=30)
+              r.raise_for_status()
+              print(f"✅ Verified: {bucket}/{key}")
           PY
-
-      - name: Step 4 - Load Raw Data to Redshift
-        env:
-          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          REDSHIFT_WORKGROUP: ${{ secrets.REDSHIFT_WORKGROUP }}
-          REDSHIFT_DATABASE: ${{ secrets.REDSHIFT_DATABASE }}
-          REDSHIFT_SCHEMA: ${{ secrets.REDSHIFT_SCHEMA }}
-          REDSHIFT_TABLE: ${{ secrets.REDSHIFT_TABLE }}
-          REDSHIFT_SECRET_ARN: ${{ secrets.REDSHIFT_SECRET_ARN }}
-          REDSHIFT_IAM_ROLE_ARN: ${{ secrets.REDSHIFT_IAM_ROLE_ARN }}
-        run: |
-          echo "🏗️ Loading raw snapshot into Redshift..."
-          export PYTHONPATH="${GITHUB_WORKSPACE}/etl:${GITHUB_WORKSPACE}:${PYTHONPATH}"
-          python etl/load_to_redshift.py
-          echo "✅ Redshift load completed"
 
       - name: Pipeline Summary
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
         run: |
           echo "🎉 Real Estate ETL Pipeline Completed Successfully!"
           echo "📅 Executed on: $(date)"
           echo "📊 Pipeline Summary:"
           echo "  ✅ Data Extraction (Zillow API)"
           echo "  ✅ Data Transformation"
-          echo "  ✅ S3 Upload"
-          echo "  ✅ Redshift Load (raw.raw_property_master_data)"
+          echo "  ✅ Supabase Storage Upload"
 
           echo ""
           echo "📦 Local Data Files:"
           ls -lh data/raw/raw_latest.csv 2>/dev/null || echo "  Raw data: Not found"
           ls -lh data/transformed/transformed_latest.csv 2>/dev/null || echo "  Transformed data: Not found"
           echo ""
-          echo "☁️ S3 Objects:"
-          echo "  s3://${S3_BUCKET}/${RAW_S3_KEY}"
-          echo "  s3://${S3_BUCKET}/${TRANSFORMED_S3_KEY}"
+          echo "☁️ Supabase Storage Objects:"
+          echo "  ${SUPABASE_STORAGE_BUCKET}/${RAW_SUPABASE_OBJECT_KEY}"
+          echo "  ${SUPABASE_STORAGE_BUCKET}/${TRANSFORMED_SUPABASE_OBJECT_KEY}"
 
       - name: Upload Data Artifacts
         uses: actions/upload-artifact@v4
