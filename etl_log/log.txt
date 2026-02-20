@@ -721,3 +721,111 @@ Configuration:
 2026-02-18 22:22:07 | INFO     | __main__ | Supabase Storage uploads completed successfully
 2026-02-18 22:22:07 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
 2026-02-18 22:22:07 | INFO     | __main__ | Duration: 0:00:00.878864
+2026-02-19 16:11:16 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-02-19 16:11:16 | INFO     | __main__ | 
+Configuration:
+2026-02-19 16:11:16 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-19 16:11:16 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-19 16:11:16 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-02-19 16:11:16 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-02-19 16:11:16 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-02-19 16:11:16 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-19 16:11:16 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv to Supabase Storage: real-estate-data/raw/raw_20260220_20260220_0011.csv
+2026-02-19 16:11:17 | INFO     | __main__ | Supabase Storage upload successful for raw/raw_20260220_20260220_0011.csv
+2026-02-19 16:11:17 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv to Supabase Storage: real-estate-data/transformed/transformed_20260220_20260220_0011.csv
+2026-02-19 16:11:17 | INFO     | __main__ | Supabase Storage upload successful for transformed/transformed_20260220_20260220_0011.csv
+2026-02-19 16:11:17 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-02-19 16:11:17 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-02-19 16:11:17 | INFO     | __main__ | Duration: 0:00:01.233266
+2026-02-19 16:15:56 | INFO     | __main__ | Real Estate ETL Pipeline - Main Entry Point
+
+2026-02-19 16:15:56 | INFO     | email_notifier | Email notifier initialized: havando1802@gmail.com -> havando1802@gmail.com
+2026-02-19 16:15:56 | INFO     | __main__ | STARTING REAL ESTATE ETL PIPELINE
+2026-02-19 16:15:56 | INFO     | __main__ | Environment: Local | ETL Run ID: 20260220_0015
+2026-02-19 16:15:56 | INFO     | __main__ | STAGE 1: EXTRACT
+2026-02-19 16:15:56 | INFO     | extract | STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS
+2026-02-19 16:15:56 | INFO     | extract | Locations configured: 1
+2026-02-19 16:15:56 | INFO     | extract | Target locations: Las Vegas, NV
+2026-02-19 16:15:56 | INFO     | extract | Processing location: Las Vegas, NV
+2026-02-19 16:15:56 | INFO     | extract | Starting extraction for location: Las Vegas, NV (max_pages: 2)
+2026-02-19 16:15:56 | INFO     | extract | Fetching page 1 for Las Vegas, NV
+2026-02-19 16:15:58 | INFO     | extract | Page 1 fetched successfully - Properties: 41, Duration: 1.96s
+2026-02-19 16:15:58 | INFO     | extract | Fetching page 2 for Las Vegas, NV
+2026-02-19 16:16:00 | INFO     | extract | Page 2 fetched successfully - Properties: 41, Duration: 1.55s
+2026-02-19 16:16:00 | INFO     | extract | Extraction complete for Las Vegas, NV - Total properties: 82, Pages processed: 2
+2026-02-19 16:16:00 | INFO     | extract | SUCCESS - Fetched 82 properties from Las Vegas, NV
+2026-02-19 16:16:02 | INFO     | extract | EXTRACTION SUMMARY
+2026-02-19 16:16:02 | INFO     | extract | Locations processed: 1
+2026-02-19 16:16:02 | INFO     | extract | Successful: 1
+2026-02-19 16:16:02 | INFO     | extract | Failed: 0
+2026-02-19 16:16:02 | INFO     | extract | Total properties fetched: 82
+2026-02-19 16:16:02 | INFO     | extract | Unique properties: 82
+2026-02-19 16:16:02 | INFO     | extract | Duplicates removed: 0
+2026-02-19 16:16:02 | INFO     | extract | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_20260220.csv
+2026-02-19 16:16:02 | INFO     | extract | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-19 16:16:02 | INFO     | __main__ | EXTRACT COMPLETED: 82 properties
+2026-02-19 16:16:02 | INFO     | __main__ | STAGE 2: TRANSFORM
+2026-02-19 16:16:02 | INFO     | transform | STARTING DATA TRANSFORMATION
+2026-02-19 16:16:02 | INFO     | transform | Reading input file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-19 16:16:02 | INFO     | transform | Loaded 82 raw records
+2026-02-19 16:16:02 | INFO     | transform | Columns found: 32
+2026-02-19 16:16:02 | INFO     | transform | Step 1: Extracting address components...
+2026-02-19 16:16:02 | INFO     | transform | Address components extracted successfully
+2026-02-19 16:16:02 | INFO     | transform | Step 2: Extracting listing subtype information...
+2026-02-19 16:16:02 | INFO     | transform | Listing subtype flags extracted
+2026-02-19 16:16:02 | INFO     | transform | Step 3: Converting timestamp fields...
+2026-02-19 16:16:02 | INFO     | transform | Converted datePriceChanged to datetime
+2026-02-19 16:16:02 | INFO     | transform | Step 4: Add snapshot dates...
+2026-02-19 16:16:02 | INFO     | transform | Snapshot dates added
+2026-02-19 16:16:02 | INFO     | transform | Step 5: Normalizing lot area to square feet...
+2026-02-19 16:16:02 | INFO     | transform | Lot areas normalized to sqft
+2026-02-19 16:16:02 | INFO     | transform | Step 6: Extracting Vegas districts...
+2026-02-19 16:16:02 | INFO     | transform | Identified 4 unique districts
+2026-02-19 16:16:02 | INFO     | transform | Step 7: Removing unnecessary columns...
+2026-02-19 16:16:02 | INFO     | transform | Removed 7 unnecessary columns
+2026-02-19 16:16:02 | INFO     | transform | Processed at: 2026-02-20 00:16:02
+2026-02-19 16:16:02 | INFO     | transform | All records passed essential field validation
+2026-02-19 16:16:02 | INFO     | transform | Final record count: 82
+2026-02-19 16:16:02 | INFO     | transform | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_20260220.csv
+2026-02-19 16:16:02 | INFO     | transform | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-19 16:16:02 | INFO     | transform | TRANSFORMATION SUMMARY
+2026-02-19 16:16:02 | INFO     | transform | Input file: raw_latest.csv
+2026-02-19 16:16:02 | INFO     | transform | Initial records: 82
+2026-02-19 16:16:02 | INFO     | transform | Final records: 82
+2026-02-19 16:16:02 | INFO     | transform | Records filtered: 0 (0.0%)
+2026-02-19 16:16:02 | INFO     | transform | Output directory: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed
+2026-02-19 16:16:02 | INFO     | __main__ | TRANSFORM COMPLETED
+2026-02-19 16:16:02 | INFO     | __main__ | STAGE 3: LOAD
+2026-02-19 16:16:02 | INFO     | load | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-19 16:16:02 | INFO     | load | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv to Supabase Storage: real-estate-data/raw/raw_20260220_20260220_0015.csv
+2026-02-19 16:16:03 | INFO     | load | Supabase Storage upload successful for raw/raw_20260220_20260220_0015.csv
+2026-02-19 16:16:03 | INFO     | load | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv to Supabase Storage: real-estate-data/transformed/transformed_20260220_20260220_0015.csv
+2026-02-19 16:16:03 | INFO     | load | Supabase Storage upload successful for transformed/transformed_20260220_20260220_0015.csv
+2026-02-19 16:16:03 | INFO     | load | Supabase Storage uploads completed successfully
+2026-02-19 16:16:03 | INFO     | __main__ | Wrote latest raw manifest: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/_latest.json
+2026-02-19 16:16:03 | INFO     | __main__ | LOAD COMPLETED
+
+2026-02-19 16:16:03 | INFO     | __main__ | ETL PIPELINE COMPLETED SUCCESSFULLY
+2026-02-19 16:16:03 | INFO     | __main__ | Duration: 0:00:06 | Quality: 100.0%
+2026-02-19 16:16:03 | INFO     | __main__ | Sending success email...
+2026-02-19 16:16:03 | INFO     | email_notifier | Preparing success email notification...
+2026-02-19 16:16:03 | INFO     | email_notifier | Connecting to SMTP server: smtp.gmail.com:587
+2026-02-19 16:16:05 | INFO     | email_notifier | Email notification sent successfully to havando1802@gmail.com
+2026-02-19 16:18:35 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-02-19 16:18:35 | INFO     | __main__ | 
+Configuration:
+2026-02-19 16:18:35 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-02-19 16:18:35 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-02-19 16:18:35 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-02-19 16:18:35 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-02-19 16:18:35 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-02-19 16:18:35 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-02-19 16:18:35 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv to Supabase Storage: real-estate-data/raw/raw_20260220_20260220_0018.csv
+2026-02-19 16:18:36 | INFO     | __main__ | Supabase Storage upload successful for raw/raw_20260220_20260220_0018.csv
+2026-02-19 16:18:36 | INFO     | __main__ | Uploading JSON manifest to Supabase Storage: real-estate-data/raw/_latest.json
+2026-02-19 16:18:36 | INFO     | __main__ | Supabase Storage JSON upload successful for raw/_latest.json
+2026-02-19 16:18:36 | INFO     | __main__ | Uploading /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv to Supabase Storage: real-estate-data/transformed/transformed_20260220_20260220_0018.csv
+2026-02-19 16:18:36 | INFO     | __main__ | Supabase Storage upload successful for transformed/transformed_20260220_20260220_0018.csv
+2026-02-19 16:18:36 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-02-19 16:18:36 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-02-19 16:18:36 | INFO     | __main__ | Duration: 0:00:01.408729

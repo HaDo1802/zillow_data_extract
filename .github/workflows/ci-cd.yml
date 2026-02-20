@@ -214,10 +214,13 @@ jobs:
 
           env_path = os.environ["GITHUB_ENV"]
           raw = results.get("raw")
+          raw_latest_manifest = results.get("raw_latest_manifest")
           transformed = results.get("transformed")
           with open(env_path, "a", encoding="utf-8") as f:
               if raw:
                   f.write(f"RAW_SUPABASE_OBJECT_KEY={raw['object_key']}\n")
+              if raw_latest_manifest:
+                  f.write(f"RAW_LATEST_MANIFEST_OBJECT_KEY={raw_latest_manifest['object_key']}\n")
               if transformed:
                   f.write(f"TRANSFORMED_SUPABASE_OBJECT_KEY={transformed['object_key']}\n")
           PY
@@ -237,6 +240,7 @@ jobs:
           service_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
           bucket = os.environ["SUPABASE_STORAGE_BUCKET"]
           raw_key = os.environ["RAW_SUPABASE_OBJECT_KEY"]
+          raw_latest_manifest_key = os.environ["RAW_LATEST_MANIFEST_OBJECT_KEY"]
           transformed_key = os.environ["TRANSFORMED_SUPABASE_OBJECT_KEY"]
 
           headers = {
@@ -244,7 +248,7 @@ jobs:
               "Authorization": f"Bearer {service_key}",
           }
 
-          for key in (raw_key, transformed_key):
+          for key in (raw_key, raw_latest_manifest_key, transformed_key):
               url = f"{base_url}/storage/v1/object/info/{bucket}/{key}"
               r = requests.get(url, headers=headers, timeout=30)
               r.raise_for_status()
@@ -269,6 +273,7 @@ jobs:
           echo ""
           echo "☁️ Supabase Storage Objects:"
           echo "  ${SUPABASE_STORAGE_BUCKET}/${RAW_SUPABASE_OBJECT_KEY}"
+          echo "  ${SUPABASE_STORAGE_BUCKET}/${RAW_LATEST_MANIFEST_OBJECT_KEY}"
           echo "  ${SUPABASE_STORAGE_BUCKET}/${TRANSFORMED_SUPABASE_OBJECT_KEY}"
 
       - name: Upload Data Artifacts

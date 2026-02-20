@@ -86,8 +86,17 @@ def run_etl_pipeline(
         logger.info("TRANSFORM COMPLETED")
 
         logger.info("STAGE 3: LOAD")
-        load_files_to_supabase(raw_file=raw_latest, transformed_file=latest_file)
+        snapshot_date = start_time.strftime("%Y%m%d")
+        load_results = load_files_to_supabase(
+            raw_file=raw_latest,
+            transformed_file=latest_file,
+            etl_run_id=etl_run_id,
+            snapshot_date=snapshot_date,
+        )
         details["records_loaded"] = len(df_transformed)
+        manifest_result = load_results.get("raw_latest_manifest")
+        if manifest_result and manifest_result.get("object_key"):
+            details["latest_raw_manifest_object_key"] = manifest_result["object_key"]
         logger.info("LOAD COMPLETED\n")
 
         end_time = datetime.now(timezone.utc)

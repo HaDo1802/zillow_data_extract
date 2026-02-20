@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
@@ -108,6 +109,41 @@ def load_to_supabase_storage(
     return {"file_path": csv_file, "bucket": bucket_name, "object_key": object_key}
 
 
+def load_json_to_supabase_storage(
+    payload: Dict[str, str], bucket_name: str, object_key: str
+) -> Dict[str, str]:
+    storage = _get_supabase_storage_config()
+    url = storage["url"].rstrip("/")
+    upload_url = f"{url}/storage/v1/object/{bucket_name}/{object_key}"
+    headers = {
+        "apikey": storage["service_key"],
+        "Authorization": f"Bearer {storage['service_key']}",
+        "Content-Type": "application/json",
+        "x-upsert": "true",
+    }
+
+    logger.info(
+        "Uploading JSON manifest to Supabase Storage: %s/%s", bucket_name, object_key
+    )
+    response = requests.post(
+        upload_url,
+        headers=headers,
+        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        timeout=120,
+    )
+
+    if response.status_code >= 400:
+        logger.error(
+            "Supabase Storage JSON upload failed (%s): %s",
+            response.status_code,
+            response.text,
+        )
+        response.raise_for_status()
+
+    logger.info("Supabase Storage JSON upload successful for %s", object_key)
+    return {"bucket": bucket_name, "object_key": object_key}
+
+
 def load_csv(
     csv_file: str = DEFAULT_FILE,
     bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
@@ -134,12 +170,14 @@ def load_files_to_supabase(
     bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
     raw_prefix: str = DEFAULT_SUPABASE_RAW_PREFIX,
     transformed_prefix: str = DEFAULT_SUPABASE_TRANSFORMED_PREFIX,
+    etl_run_id: Optional[str] = None,
+    snapshot_date: Optional[str] = None,
 ):
     """Upload raw and transformed CSV files into Supabase Storage."""
     logger.info("STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)")
     results = {}
-    etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
-    snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
+    etl_run_id = etl_run_id or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    snapshot_date = snapshot_date or datetime.now(timezone.utc).strftime("%Y%m%d")
 
     if raw_file and os.path.exists(raw_file):
         raw_key = _build_object_key(
@@ -152,6 +190,17 @@ def load_files_to_supabase(
             csv_file=raw_file,
             bucket_name=bucket_name,
             object_key=raw_key,
+        )
+        latest_manifest_key = f"{raw_prefix}/_latest.json"
+        latest_manifest_payload = {
+            "path": raw_key,
+            "run_id": etl_run_id,
+            "snapshot_date": snapshot_date,
+        }
+        results["raw_latest_manifest"] = load_json_to_supabase_storage(
+            payload=latest_manifest_payload,
+            bucket_name=bucket_name,
+            object_key=latest_manifest_key,
         )
     else:
         logger.warning("Raw file not found or not provided, skipping: %s", raw_file)
