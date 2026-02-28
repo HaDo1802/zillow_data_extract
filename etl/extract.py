@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import time
 from datetime import datetime, timezone
@@ -17,7 +18,11 @@ logger = get_logger(__name__)
 
 
 def fetch_zillow(location, max_pages=2):
-    """Fetch property listings from Zillow API for a specific location."""
+    """Fetch property listings from Zillow API for a specific location.
+
+    Pages are sampled randomly per run. `max_pages` controls how many pages
+    are fetched (up to the API-reported totalPages).
+    """
 
     if not config.RAPID_API_KEY:
         logger.error("RAPID_API_KEY not configured in environment")
@@ -29,14 +34,68 @@ def fetch_zillow(location, max_pages=2):
     }
     url = "https://us-housing-market-data1.p.rapidapi.com/propertyExtendedSearch"
     all_props = []
-    page = 1
+    last_page_attempted = 1
 
     logger.info(
         f"Starting extraction for location: {location} (max_pages: {max_pages})"
     )
 
     try:
-        while page <= max_pages:
+        if max_pages < 1:
+            logger.warning(
+                f"max_pages={max_pages} for {location}; nothing to fetch. "
+                "Use max_pages >= 1."
+            )
+            return pd.DataFrame()
+
+        # Initial request to discover totalPages and validate response shape.
+        first_page = 1
+        params = {"location": location, "page": first_page}
+        logger.info(f"Fetching discovery page {first_page} for {location}")
+        request_start = time.time()
+        res = requests.get(url, headers=headers, params=params, timeout=30)
+        request_duration = round(time.time() - request_start, 2)
+
+        if res.status_code != 200:
+            logger.warning(
+                f"API request failed for {location} page {first_page} - "
+                f"Status: {res.status_code}, Duration: {request_duration}s"
+            )
+            return pd.DataFrame()
+
+        json_data = res.json()
+        if not json_data or "props" not in json_data:
+            logger.warning(
+                f"No property data in response for {location} page {first_page}"
+            )
+            return pd.DataFrame()
+
+        total_pages = int(json_data.get("totalPages", first_page))
+        pages_to_fetch_count = min(max_pages, total_pages)
+        pages_to_fetch = random.sample(
+            range(1, total_pages + 1), k=pages_to_fetch_count
+        )
+
+        logger.info(
+            f"Random page sample for {location}: {sorted(pages_to_fetch)} "
+            f"(requested={max_pages}, available={total_pages})"
+        )
+
+        processed_pages = 0
+
+        for page in pages_to_fetch:
+            last_page_attempted = page
+            if page == first_page:
+                props = json_data["props"]
+                logger.info(
+                    f"Page {page} fetched successfully (cached) - "
+                    f"Properties: {len(props)}, Duration: {request_duration}s"
+                )
+                all_props.extend(props)
+                processed_pages += 1
+                time.sleep(0.2)
+                continue
+
             params = {
                 "location": location,
                 "page": page,
@@ -69,34 +128,31 @@ def fetch_zillow(location, max_pages=2):
                 f"Properties: {len(props)}, Duration: {request_duration}s"
             )
             all_props.extend(props)
-
-            # Pagination logic
-            total_pages = int(json_data.get("totalPages", page))
-            if page >= total_pages:
-                logger.info(f"Reached last page ({total_pages}) for {location}")
-                break
-
-            page += 1
+            processed_pages += 1
             time.sleep(0.2)
 
         if not all_props:
-            logger.error(f"No data extracted from {location} after {page - 1} page(s)")
+            logger.error(
+                f"No data extracted from {location} after {processed_pages} page(s)"
+            )
             return pd.DataFrame()
         df_raw = pd.DataFrame(all_props)
         df_raw["extracted_at"] = datetime.now(timezone.utc)
 
         logger.info(
             f"Extraction complete for {location} - "
-            f"Total properties: {len(df_raw)}, Pages processed: {page - 1}"
+            f"Total properties: {len(df_raw)}, Pages processed: {processed_pages}"
         )
 
         return df_raw
 
     except requests.exceptions.Timeout as e:
-        logger.error(f"Request timeout for {location} page {page}")
+        logger.error(f"Request timeout for {location} page {last_page_attempted}")
         raise
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error for {location} page {page}: {str(e)}")
+        logger.error(
+            f"Request error for {location} page {last_page_attempted}: {str(e)}"
+        )
         raise
     except Exception as e:
         logger.error(f"Unexpected error fetching {location}: {str(e)}", exc_info=True)
