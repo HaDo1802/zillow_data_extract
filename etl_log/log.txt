@@ -933,3 +933,62 @@ Configuration:
 2026-03-18 13:02:03 | INFO     | __main__ | Supabase Storage uploads completed successfully
 2026-03-18 13:02:03 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
 2026-03-18 13:02:03 | INFO     | __main__ | Duration: 0:00:01.237770
+2026-03-18 13:24:00 | INFO     | __main__ | Starting Zillow data extraction script:
+2026-03-18 13:24:20 | INFO     | __main__ | Starting Zillow data extraction script:
+2026-03-18 13:24:20 | INFO     | __main__ | STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS
+2026-03-18 13:24:20 | INFO     | __main__ | Locations configured: 1
+2026-03-18 13:24:20 | INFO     | __main__ | Target locations: Las Vegas, NV
+2026-03-18 13:24:20 | INFO     | __main__ | Processing location: Las Vegas, NV
+2026-03-18 13:24:20 | INFO     | __main__ | Starting extraction for location: Las Vegas, NV (max_pages: 1)
+2026-03-18 13:24:20 | INFO     | __main__ | Fetching discovery page 1 for Las Vegas, NV
+2026-03-18 13:24:21 | ERROR    | __main__ | Unexpected error fetching Las Vegas, NV: invalid literal for int() with base 10: '2026-03-18'
+Traceback (most recent call last):
+  File "/Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/etl/extract.py", line 70, in fetch_zillow
+    random.seed(int(snapshot_date))
+                ~~~^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: '2026-03-18'
+2026-03-18 13:24:21 | ERROR    | __main__ | FAILED - Error processing Las Vegas, NV: invalid literal for int() with base 10: '2026-03-18'
+Traceback (most recent call last):
+  File "/Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/etl/extract.py", line 168, in fetch_all_locations
+    df_result = fetch_zillow(
+        loc,
+        max_pages=max_pages,
+        snapshot_date=snapshot_date,
+    )
+  File "/Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/etl/extract.py", line 70, in fetch_zillow
+    random.seed(int(snapshot_date))
+                ~~~^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: '2026-03-18'
+2026-03-18 13:24:21 | ERROR    | __main__ | EXTRACTION FAILED - No data extracted from any location
+2026-03-18 13:24:21 | ERROR    | __main__ | 
+======================================================================
+2026-03-18 13:24:21 | ERROR    | __main__ | EXTRACTION FAILED - No data retrieved
+2026-03-18 13:24:21 | ERROR    | __main__ | ======================================================================
+2026-03-18 13:51:47 | INFO     | __main__ | Starting Zillow data extraction script:
+2026-03-18 13:51:47 | INFO     | __main__ | STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS
+2026-03-18 13:51:47 | INFO     | __main__ | Locations configured: 1
+2026-03-18 13:51:47 | INFO     | __main__ | Target locations: Las Vegas, NV
+2026-03-18 13:51:47 | INFO     | __main__ | Processing location: Las Vegas, NV
+2026-03-18 13:51:47 | INFO     | __main__ | Starting extraction for location: Las Vegas, NV (max_pages: 1)
+2026-03-18 13:51:47 | INFO     | __main__ | Fetching discovery page 1 for Las Vegas, NV
+2026-03-18 13:51:48 | INFO     | __main__ | Random page sample for Las Vegas, NV: [7] (requested=1, available=20)
+2026-03-18 13:51:48 | INFO     | __main__ | Fetching page 7 for Las Vegas, NV
+2026-03-18 13:51:49 | INFO     | __main__ | Page 7 fetched successfully - Properties: 41, Duration: 0.92s
+2026-03-18 13:51:50 | INFO     | __main__ | Extraction complete for Las Vegas, NV - Total properties: 41, Pages processed: 1
+2026-03-18 13:51:50 | INFO     | __main__ | SUCCESS - Fetched 41 properties from Las Vegas, NV
+2026-03-18 13:51:52 | INFO     | __main__ | EXTRACTION SUMMARY
+2026-03-18 13:51:52 | INFO     | __main__ | Locations processed: 1
+2026-03-18 13:51:52 | INFO     | __main__ | Successful: 1
+2026-03-18 13:51:52 | INFO     | __main__ | Failed: 0
+2026-03-18 13:51:52 | INFO     | __main__ | Total properties fetched: 41
+2026-03-18 13:51:52 | INFO     | __main__ | Unique properties: 41
+2026-03-18 13:51:52 | INFO     | __main__ | Duplicates removed: 0
+2026-03-18 13:51:52 | INFO     | __main__ | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_20260318.csv
+2026-03-18 13:51:52 | INFO     | __main__ | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 13:51:52 | INFO     | __main__ | 
+======================================================================
+2026-03-18 13:51:52 | INFO     | __main__ | EXTRACTION COMPLETED SUCCESSFULLY
+2026-03-18 13:51:52 | INFO     | __main__ | ======================================================================
+2026-03-18 13:51:52 | INFO     | __main__ | Total unique properties: 41
+2026-03-18 13:51:52 | INFO     | __main__ | Total duration: 0:00:04.183189
+2026-03-18 13:51:52 | INFO     | __main__ | ======================================================================

@@ -67,7 +67,7 @@ def fetch_zillow(location, max_pages=2, snapshot_date=None):
         total_pages = int(json_data.get("totalPages", first_page))
         pages_to_fetch_count = min(max_pages, total_pages)
         if snapshot_date is not None:
-            random.seed(int(snapshot_date))
+            random.seed(int(str(snapshot_date).replace("-", "")))
         pages_to_fetch = random.sample(range(1, total_pages + 1), k=pages_to_fetch_count)
 
         logger.info(
@@ -230,7 +230,8 @@ def fetch_all_locations(locations=None, max_pages=5, snapshot_date=None):
 if __name__ == "__main__":
     logger.info("Starting Zillow data extraction script:")
     start_time = datetime.now(timezone.utc)
-    df_result = fetch_all_locations(["Las Vegas, NV"], 1)
+    snapshot_date = start_time.strftime("%Y-%m-%d")
+    df_result = fetch_all_locations(["Las Vegas, NV"], 1, snapshot_date=snapshot_date)
     duration = datetime.now(timezone.utc) - start_time
     if not df_result.empty:
         logger.info("\n" + "=" * 70)
