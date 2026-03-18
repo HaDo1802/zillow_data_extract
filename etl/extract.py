@@ -17,11 +17,12 @@ from utils.config import config  # noqa: E402
 logger = get_logger(__name__)
 
 
-def fetch_zillow(location, max_pages=2):
+def fetch_zillow(location, max_pages=2, snapshot_date=None):
     """Fetch property listings from Zillow API for a specific location.
 
     Pages are sampled randomly per run. `max_pages` controls how many pages
     are fetched (up to the API-reported totalPages).
+    Seeding random with `snapshot_date` allows for reproducible sampling across runs on the same date.
     """
 
     if not config.RAPID_API_KEY:
@@ -65,6 +66,8 @@ def fetch_zillow(location, max_pages=2):
 
         total_pages = int(json_data.get("totalPages", first_page))
         pages_to_fetch_count = min(max_pages, total_pages)
+        if snapshot_date is not None:
+            random.seed(int(snapshot_date))
         pages_to_fetch = random.sample(range(1, total_pages + 1), k=pages_to_fetch_count)
 
         logger.info(
@@ -138,7 +141,7 @@ def fetch_zillow(location, max_pages=2):
         raise
 
 
-def fetch_all_locations(locations=None, max_pages=5):
+def fetch_all_locations(locations=None, max_pages=5, snapshot_date=None):
     """
     Fetch data from all configured locations and combine into single file.
 
@@ -162,7 +165,11 @@ def fetch_all_locations(locations=None, max_pages=5):
     for loc in LOCATIONS:
         logger.info(f"Processing location: {loc}")
         try:
-            df_result = fetch_zillow(loc, max_pages=max_pages)
+            df_result = fetch_zillow(
+                loc,
+                max_pages=max_pages,
+                snapshot_date=snapshot_date,
+            )
 
             if isinstance(df_result, pd.DataFrame) and not df_result.empty:
                 all_data.append(df_result)

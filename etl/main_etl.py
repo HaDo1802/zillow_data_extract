@@ -63,7 +63,11 @@ def run_etl_pipeline(
 
     try:
         logger.info("STAGE 1: EXTRACT")
-        df_extracted = fetch_all_locations(target_locations, max_pages)
+        df_extracted = fetch_all_locations(
+            target_locations,
+            max_pages,
+            snapshot_date=snapshot_date,
+        )
         if df_extracted.empty:
             details["error"] = "No data extracted from API"
             details["failed_step"] = "EXTRACT"

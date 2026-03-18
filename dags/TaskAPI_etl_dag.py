@@ -46,15 +46,22 @@ def real_estate_etl_pipeline():
         import os
         import logging
         from datetime import datetime, timezone
+        from airflow.decorators import get_current_context
         from etl.extract import fetch_all_locations
 
         log = logging.getLogger("airflow.task")
+        context = get_current_context()
+        snapshot_date = context["data_interval_start"].strftime("%Y%m%d")
 
         output_file = os.path.join(paths["raw"], "raw_latest.csv")
         log.info("Starting extract_zillow. Will write to: %s", output_file)
 
         try:
-            df = fetch_all_locations(DEFAULT_LOCATIONS, DEFAULT_MAX_PAGES)
+            df = fetch_all_locations(
+                DEFAULT_LOCATIONS,
+                DEFAULT_MAX_PAGES,
+                snapshot_date=snapshot_date,
+            )
             log.info("Fetched dataframe shape=%s", getattr(df, "shape", None))
 
             if df is None or df.empty:
