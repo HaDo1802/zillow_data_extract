@@ -36,16 +36,11 @@ def fetch_zillow(location, max_pages=2):
     all_props = []
     last_page_attempted = 1
 
-    logger.info(
-        f"Starting extraction for location: {location} (max_pages: {max_pages})"
-    )
+    logger.info(f"Starting extraction for location: {location} (max_pages: {max_pages})")
 
     try:
         if max_pages < 1:
-            logger.warning(
-                f"max_pages={max_pages} for {location}; nothing to fetch. "
-                "Use max_pages >= 1."
-            )
+            logger.warning(f"max_pages={max_pages} for {location}; nothing to fetch. " "Use max_pages >= 1.")
             return pd.DataFrame()
 
         # Initial request to discover totalPages and validate response shape.
@@ -65,20 +60,15 @@ def fetch_zillow(location, max_pages=2):
 
         json_data = res.json()
         if not json_data or "props" not in json_data:
-            logger.warning(
-                f"No property data in response for {location} page {first_page}"
-            )
+            logger.warning(f"No property data in response for {location} page {first_page}")
             return pd.DataFrame()
 
         total_pages = int(json_data.get("totalPages", first_page))
         pages_to_fetch_count = min(max_pages, total_pages)
-        pages_to_fetch = random.sample(
-            range(1, total_pages + 1), k=pages_to_fetch_count
-        )
+        pages_to_fetch = random.sample(range(1, total_pages + 1), k=pages_to_fetch_count)
 
         logger.info(
-            f"Random page sample for {location}: {sorted(pages_to_fetch)} "
-            f"(requested={max_pages}, available={total_pages})"
+            f"Random page sample for {location}: {sorted(pages_to_fetch)} " f"(requested={max_pages}, available={total_pages})"
         )
 
         processed_pages = 0
@@ -88,8 +78,7 @@ def fetch_zillow(location, max_pages=2):
             if page == first_page:
                 props = json_data["props"]
                 logger.info(
-                    f"Page {page} fetched successfully (cached) - "
-                    f"Properties: {len(props)}, Duration: {request_duration}s"
+                    f"Page {page} fetched successfully (cached) - " f"Properties: {len(props)}, Duration: {request_duration}s"
                 )
                 all_props.extend(props)
                 processed_pages += 1
@@ -117,42 +106,32 @@ def fetch_zillow(location, max_pages=2):
             json_data = res.json()
 
             if not json_data or "props" not in json_data:
-                logger.warning(
-                    f"No property data in response for {location} page {page}"
-                )
+                logger.warning(f"No property data in response for {location} page {page}")
                 break
 
             props = json_data["props"]
-            logger.info(
-                f"Page {page} fetched successfully - "
-                f"Properties: {len(props)}, Duration: {request_duration}s"
-            )
+            logger.info(f"Page {page} fetched successfully - " f"Properties: {len(props)}, Duration: {request_duration}s")
             all_props.extend(props)
             processed_pages += 1
             time.sleep(0.2)
 
         if not all_props:
-            logger.error(
-                f"No data extracted from {location} after {processed_pages} page(s)"
-            )
+            logger.error(f"No data extracted from {location} after {processed_pages} page(s)")
             return pd.DataFrame()
         df_raw = pd.DataFrame(all_props)
         df_raw["extracted_at"] = datetime.now(timezone.utc)
 
         logger.info(
-            f"Extraction complete for {location} - "
-            f"Total properties: {len(df_raw)}, Pages processed: {processed_pages}"
+            f"Extraction complete for {location} - " f"Total properties: {len(df_raw)}, Pages processed: {processed_pages}"
         )
 
         return df_raw
 
-    except requests.exceptions.Timeout as e:
+    except requests.exceptions.Timeout:
         logger.error(f"Request timeout for {location} page {last_page_attempted}")
         raise
     except requests.exceptions.RequestException as e:
-        logger.error(
-            f"Request error for {location} page {last_page_attempted}: {str(e)}"
-        )
+        logger.error(f"Request error for {location} page {last_page_attempted}: {str(e)}")
         raise
     except Exception as e:
         logger.error(f"Unexpected error fetching {location}: {str(e)}", exc_info=True)
@@ -225,16 +204,12 @@ def fetch_all_locations(locations=None, max_pages=5):
     if os.path.exists("/opt/airflow"):
         raw_dir = "/opt/airflow/data/raw"
     else:
-        raw_dir = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "data", "raw"
-        )
+        raw_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "raw")
 
     os.makedirs(raw_dir, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     raw_timestamped = os.path.join(raw_dir, f"raw_{timestamp}.csv")
-    df_combined.to_csv(
-        raw_timestamped, index=False
-    )  # Consider using Polars for optimizing large files
+    df_combined.to_csv(raw_timestamped, index=False)  # Consider using Polars for optimizing large files
     logger.info(f"Saved timestamped file: {raw_timestamped}")
 
     # Save latest file (for transform script to read)
@@ -248,7 +223,7 @@ def fetch_all_locations(locations=None, max_pages=5):
 if __name__ == "__main__":
     logger.info("Starting Zillow data extraction script:")
     start_time = datetime.now(timezone.utc)
-    df_result = fetch_all_locations(["Las Vegas, NV"], 5)
+    df_result = fetch_all_locations(["Las Vegas, NV"], 1)
     duration = datetime.now(timezone.utc) - start_time
     if not df_result.empty:
         logger.info("\n" + "=" * 70)

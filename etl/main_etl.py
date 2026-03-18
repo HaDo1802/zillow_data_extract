@@ -45,7 +45,8 @@ def run_etl_pipeline(
     target_locations = locations or DEFAULT_LOCATIONS
 
     start_time = datetime.now(timezone.utc)
-    etl_run_id = start_time.strftime("%Y%m%d_%H%M")
+    etl_run_id = start_time.strftime("%Y%m%d")
+    snapshot_date = start_time.strftime("%Y%m%d")
     resolved_base_dir, raw_dir, transformed_dir = get_base_paths(base_dir=base_dir)
     env_type = "Docker/Airflow" if os.path.exists("/opt/airflow") else "Local"
 
@@ -73,9 +74,7 @@ def run_etl_pipeline(
 
         logger.info("STAGE 2: TRANSFORM")
         raw_latest = os.path.join(raw_dir, "raw_latest.csv")
-        df_transformed, timestamped_file, latest_file = main_transform(
-            input_file=raw_latest, output_dir=transformed_dir
-        )
+        df_transformed, timestamped_file, latest_file = main_transform(input_file=raw_latest, output_dir=transformed_dir)
 
         if df_transformed is None or df_transformed.empty:
             details["error"] = "No data after transformation"
@@ -86,7 +85,6 @@ def run_etl_pipeline(
         logger.info("TRANSFORM COMPLETED")
 
         logger.info("STAGE 3: LOAD")
-        snapshot_date = start_time.strftime("%Y%m%d")
         load_results = load_files_to_supabase(
             raw_file=raw_latest,
             transformed_file=latest_file,
@@ -107,9 +105,7 @@ def run_etl_pipeline(
         quality_rate = (len(df_transformed) / len(df_extracted)) * 100
         details["quality_rate"] = f"{quality_rate:.1f}%"
         logger.info("ETL PIPELINE COMPLETED SUCCESSFULLY")
-        logger.info(
-            f"Duration: {details['duration']} | Quality: {details['quality_rate']}"
-        )
+        logger.info(f"Duration: {details['duration']} | Quality: {details['quality_rate']}")
         return True, details
 
     except Exception as e:
@@ -120,9 +116,7 @@ def run_etl_pipeline(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Real Estate ETL Pipeline - Extract, Transform, and Load data"
-    )
+    parser = argparse.ArgumentParser(description="Real Estate ETL Pipeline - Extract, Transform, and Load data")
     parser.add_argument(
         "--max-pages",
         type=int,

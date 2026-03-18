@@ -15,12 +15,9 @@ def send_success_notification(**context):
     """Send success notification with pipeline metrics."""
     try:
         # Get pipeline metrics from XCom or calculate
-        records_processed = (
-            context["task_instance"].xcom_pull(task_ids="load_cleaned_data_to_supabase")
-            or "Unknown"
-        )
-        #records_processed_s3 = context["task_instance"].xcom_pull(task_ids="load_to_s3") or "Unknown"
-        #records_processed = f"Postgres: {records_processed_postgres}"
+        records_processed = context["task_instance"].xcom_pull(task_ids="load_cleaned_data_to_supabase") or "Unknown"
+        # records_processed_s3 = context["task_instance"].xcom_pull(task_ids="load_to_s3") or "Unknown"
+        # records_processed = f"Postgres: {records_processed_postgres}"
         # Calculate duration using task instance timing
         task_instance = context["task_instance"]
         if task_instance.start_date and task_instance.end_date:

@@ -35,7 +35,6 @@ def load_district_mapping(file_path: str = DISTRICT_MAPPING_FILE) -> dict:
     return mapping
 
 
-
 def extract_address_components(address: str) -> dict:
     """Extract street, city, state, zip from address string."""
     if not address or pd.isna(address):

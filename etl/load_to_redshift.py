@@ -17,9 +17,7 @@ DEFAULT_COLUMNS = (
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Load a local CSV file into Supabase (Postgres) using COPY."
-    )
+    parser = argparse.ArgumentParser(description="Load a local CSV file into Supabase (Postgres) using COPY.")
     parser.add_argument(
         "--csv-path",
         required=True,
@@ -72,9 +70,7 @@ def main():
     if not columns:
         raise ValueError("No columns provided. Set --columns or SUPABASE_COLUMNS.")
 
-    copy_query = sql.SQL(
-        "COPY {}.{} ({}) FROM STDIN WITH (FORMAT csv, HEADER true)"
-    ).format(
+    copy_query = sql.SQL("COPY {}.{} ({}) FROM STDIN WITH (FORMAT csv, HEADER true)").format(
         sql.Identifier(args.schema),
         sql.Identifier(args.table),
         sql.SQL(", ").join(sql.Identifier(c) for c in columns),

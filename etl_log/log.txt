@@ -829,3 +829,107 @@ Configuration:
 2026-02-19 16:18:36 | INFO     | __main__ | Supabase Storage uploads completed successfully
 2026-02-19 16:18:36 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
 2026-02-19 16:18:36 | INFO     | __main__ | Duration: 0:00:01.408729
+2026-03-18 15:33:04 | INFO     | airflow.providers.fab.auth_manager.security_manager.override | Created Permission View: can read on DAG:real_estate_etl_pipeline
+2026-03-18 15:33:04 | INFO     | airflow.providers.fab.auth_manager.security_manager.override | Created Permission View: can edit on DAG:real_estate_etl_pipeline
+2026-03-18 15:33:04 | INFO     | airflow.providers.fab.auth_manager.security_manager.override | Created Permission View: can delete on DAG:real_estate_etl_pipeline
+2026-03-18 15:33:04 | INFO     | airflow.models.dag | Sync 1 DAGs
+2026-03-18 15:33:04 | INFO     | airflow.models.dag | Creating ORM DAG for real_estate_etl_pipeline
+2026-03-18 15:33:04 | INFO     | airflow.models.dag | Setting next_dagrun for real_estate_etl_pipeline to 2026-03-17 06:00:00+00:00, run_after=2026-03-18 06:00:00+00:00
+2026-03-18 15:33:35 | INFO     | airflow.models.dag | Sync 1 DAGs
+2026-03-18 15:33:35 | INFO     | airflow.models.dag | Setting next_dagrun for real_estate_etl_pipeline to 2026-03-17 06:00:00+00:00, run_after=2026-03-18 06:00:00+00:00
+2026-03-18 15:34:06 | INFO     | airflow.models.dag | Sync 1 DAGs
+2026-03-18 15:34:06 | INFO     | airflow.models.dag | Setting next_dagrun for real_estate_etl_pipeline to 2026-03-17 06:00:00+00:00, run_after=2026-03-18 06:00:00+00:00
+2026-03-18 15:34:36 | INFO     | airflow.models.dag | Sync 1 DAGs
+2026-03-18 15:34:36 | INFO     | airflow.models.dag | Setting next_dagrun for real_estate_etl_pipeline to 2026-03-17 06:00:00+00:00, run_after=2026-03-18 06:00:00+00:00
+2026-03-18 15:35:07 | INFO     | airflow.models.dag | Sync 1 DAGs
+2026-03-18 15:35:07 | INFO     | airflow.models.dag | Setting next_dagrun for real_estate_etl_pipeline to 2026-03-17 06:00:00+00:00, run_after=2026-03-18 06:00:00+00:00
+2026-03-18 12:34:39 | INFO     | __main__ | Starting Zillow data extraction script:
+2026-03-18 12:34:39 | INFO     | __main__ | STARTING DATA EXTRACTION FROM ALL LISTED LOCATIONS
+2026-03-18 12:34:39 | INFO     | __main__ | Locations configured: 1
+2026-03-18 12:34:39 | INFO     | __main__ | Target locations: Las Vegas, NV
+2026-03-18 12:34:39 | INFO     | __main__ | Processing location: Las Vegas, NV
+2026-03-18 12:34:39 | INFO     | __main__ | Starting extraction for location: Las Vegas, NV (max_pages: 1)
+2026-03-18 12:34:39 | INFO     | __main__ | Fetching discovery page 1 for Las Vegas, NV
+2026-03-18 12:34:46 | INFO     | __main__ | Random page sample for Las Vegas, NV: [12] (requested=1, available=20)
+2026-03-18 12:34:46 | INFO     | __main__ | Fetching page 12 for Las Vegas, NV
+2026-03-18 12:34:47 | INFO     | __main__ | Page 12 fetched successfully - Properties: 41, Duration: 1.63s
+2026-03-18 12:34:47 | INFO     | __main__ | Extraction complete for Las Vegas, NV - Total properties: 41, Pages processed: 1
+2026-03-18 12:34:47 | INFO     | __main__ | SUCCESS - Fetched 41 properties from Las Vegas, NV
+2026-03-18 12:34:49 | INFO     | __main__ | EXTRACTION SUMMARY
+2026-03-18 12:34:49 | INFO     | __main__ | Locations processed: 1
+2026-03-18 12:34:49 | INFO     | __main__ | Successful: 1
+2026-03-18 12:34:49 | INFO     | __main__ | Failed: 0
+2026-03-18 12:34:49 | INFO     | __main__ | Total properties fetched: 41
+2026-03-18 12:34:49 | INFO     | __main__ | Unique properties: 41
+2026-03-18 12:34:49 | INFO     | __main__ | Duplicates removed: 0
+2026-03-18 12:34:49 | INFO     | __main__ | Saved timestamped file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_20260318.csv
+2026-03-18 12:34:50 | INFO     | __main__ | Saved latest file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 12:34:50 | INFO     | __main__ | 
+======================================================================
+2026-03-18 12:34:50 | INFO     | __main__ | EXTRACTION COMPLETED SUCCESSFULLY
+2026-03-18 12:34:50 | INFO     | __main__ | ======================================================================
+2026-03-18 12:34:50 | INFO     | __main__ | Total unique properties: 41
+2026-03-18 12:34:50 | INFO     | __main__ | Total duration: 0:00:11.782256
+2026-03-18 12:34:50 | INFO     | __main__ | ======================================================================
+2026-03-18 12:35:59 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-03-18 12:36:00 | INFO     | __main__ | 
+Configuration:
+2026-03-18 12:36:00 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 12:36:00 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-03-18 12:36:00 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-03-18 12:36:00 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-03-18 12:36:00 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-03-18 12:36:00 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-03-18 12:36:00 | INFO     | __main__ | Uploading raw file to real-estate-data/raw/raw_20260318_20260318.csv
+2026-03-18 12:36:00 | INFO     | __main__ | Uploading transformed file to real-estate-data/transformed/transformed_20260318_20260318.csv
+2026-03-18 12:36:01 | INFO     | __main__ | Uploading manifest to real-estate-data/raw/_latest.json
+2026-03-18 12:36:02 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-03-18 12:36:02 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-03-18 12:36:02 | INFO     | __main__ | Duration: 0:00:02.107734
+2026-03-18 12:43:06 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-03-18 12:43:06 | INFO     | __main__ | 
+Configuration:
+2026-03-18 12:43:06 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 12:43:06 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-03-18 12:43:06 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-03-18 12:43:06 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-03-18 12:43:06 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-03-18 12:43:06 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-03-18 12:43:06 | INFO     | __main__ | Uploading raw file to real-estate-data/raw/raw_20260318_20260318.csv
+2026-03-18 12:43:07 | INFO     | __main__ | Uploading transformed file to real-estate-data/transformed/transformed_20260318_20260318.csv
+2026-03-18 12:43:07 | INFO     | __main__ | Uploading manifest to real-estate-data/raw/_latest.json
+2026-03-18 12:43:08 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-03-18 12:43:08 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-03-18 12:43:08 | INFO     | __main__ | Duration: 0:00:01.451179
+2026-03-18 12:49:06 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-03-18 12:49:06 | INFO     | __main__ | 
+Configuration:
+2026-03-18 12:49:06 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 12:49:06 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-03-18 12:49:06 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-03-18 12:49:06 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-03-18 12:49:06 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-03-18 12:49:06 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-03-18 12:49:06 | INFO     | __main__ | Uploading raw file to real-estate-data/raw/raw_20260318_20260318.csv
+2026-03-18 12:49:06 | INFO     | __main__ | Uploading transformed file to real-estate-data/transformed/transformed_20260318_20260318.csv
+2026-03-18 12:49:07 | INFO     | __main__ | Uploading manifest to real-estate-data/raw/_latest.json
+2026-03-18 12:49:07 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-03-18 12:49:07 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-03-18 12:49:07 | INFO     | __main__ | Duration: 0:00:01.219803
+2026-03-18 13:02:02 | INFO     | __main__ | RUNNING IN LOCAL ENVIRONMENT
+2026-03-18 13:02:02 | INFO     | __main__ | 
+Configuration:
+2026-03-18 13:02:02 | INFO     | __main__ |   Raw file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/raw/raw_latest.csv
+2026-03-18 13:02:02 | INFO     | __main__ |   Transformed file: /Users/hado/Desktop/Career/Coding/Data Engineer/Project/real_estate_extract/data/transformed/transformed_latest.csv
+2026-03-18 13:02:02 | INFO     | __main__ |   Supabase storage bucket: real-estate-data
+2026-03-18 13:02:02 | INFO     | __main__ |   Supabase raw prefix: raw
+2026-03-18 13:02:02 | INFO     | __main__ |   Supabase transformed prefix: transformed
+2026-03-18 13:02:02 | INFO     | __main__ | STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)
+2026-03-18 13:02:02 | INFO     | __main__ |  Starting to upload data csv files to Supabase storage
+2026-03-18 13:02:02 | INFO     | __main__ | Uploading raw file to real-estate-data/raw/raw_20260318_20260318.csv
+2026-03-18 13:02:03 | INFO     | __main__ | Uploading transformed file to real-estate-data/transformed/transformed_20260318_20260318.csv
+2026-03-18 13:02:03 | INFO     | __main__ |  Starting to upload manifest to Supabase storage
+2026-03-18 13:02:03 | INFO     | __main__ | Uploading manifest to real-estate-data/raw/_latest.json
+2026-03-18 13:02:03 | INFO     | __main__ | Supabase Storage uploads completed successfully
+2026-03-18 13:02:03 | INFO     | __main__ | DATA LOAD COMPLETED SUCCESSFULLY
+2026-03-18 13:02:03 | INFO     | __main__ | Duration: 0:00:01.237770

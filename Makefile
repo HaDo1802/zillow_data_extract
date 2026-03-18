@@ -22,11 +22,11 @@ test:
 	pytest tests/ -v --cov=etl --cov-report=term-missing
 
 lint:
-	flake8 etl/ tests/ dags/real_estate_etl_dag.py
+	flake8 etl/ tests/ dags/ --max-line-length=127 --extend-ignore=E402,
 
 format:
-	black etl/ tests/ dags/real_estate_etl_dag.py --line-length 127
-#	isort etl/ tests/ dags/real_estate_etl_dag.py --profile black
+	black etl/ tests/ dags/ --line-length 127
+#	isort etl/ tests/ dags/ --profile black
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

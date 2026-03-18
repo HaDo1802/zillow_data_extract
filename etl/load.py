@@ -1,23 +1,23 @@
+import json
 import os
 import sys
-import json
 from datetime import datetime, timezone
 from typing import Dict, Optional
+
+import requests
+from dotenv import load_dotenv
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from dotenv import load_dotenv
-import requests
-
 from logger import get_logger
 from utils.config import config
 
-# Initialize logger for this module
 logger = get_logger(__name__)
 load_dotenv()
+UPLOAD_TIMEOUT_SECONDS = 120
 
-DEFAULT_FILE = os.path.abspath(
+DEFAULT_TRANSFORMED_FILE = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -25,14 +25,6 @@ DEFAULT_FILE = os.path.abspath(
         "transformed",
         "transformed_latest.csv",
     )
-)
-
-DEFAULT_SUPABASE_STORAGE_BUCKET = os.getenv(
-    "SUPABASE_STORAGE_BUCKET", "real-estate-data"
-)
-DEFAULT_SUPABASE_RAW_PREFIX = os.getenv("SUPABASE_RAW_PREFIX", "raw")
-DEFAULT_SUPABASE_TRANSFORMED_PREFIX = os.getenv(
-    "SUPABASE_TRANSFORMED_PREFIX", "transformed"
 )
 DEFAULT_RAW_FILE = os.path.abspath(
     os.path.join(
@@ -44,211 +36,203 @@ DEFAULT_RAW_FILE = os.path.abspath(
     )
 )
 
-
-def _env(*keys: str, default: Optional[str] = None) -> Optional[str]:
-    for key in keys:
-        value = os.getenv(key)
-        if value:
-            return value.strip()
-    return default
+DEFAULT_SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "real-estate-data")
+DEFAULT_SUPABASE_RAW_PREFIX = os.getenv("SUPABASE_RAW_PREFIX", "raw")
+DEFAULT_SUPABASE_TRANSFORMED_PREFIX = os.getenv("SUPABASE_TRANSFORMED_PREFIX", "transformed")
 
 
-def _get_supabase_storage_config() -> Dict[str, str]:
-    url = _env("SUPABASE_URL")
-    service_key = _env("SUPABASE_SERVICE_ROLE_KEY")  # service_role key
+def _resolve_run_metadata(etl_run_id: Optional[str] = None, snapshot_date: Optional[str] = None) -> Dict[str, str]:
+    """
+    Resolve ETL run metadata for the current execution.
+    """
+    if etl_run_id and snapshot_date:
+        return {"etl_run_id": etl_run_id, "snapshot_date": snapshot_date}
 
-    if not url or not service_key:
-        raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
-
-    return {"url": url, "service_key": service_key}
-
-
-def _build_object_key(
-    prefix: str, basename: str, snapshot_date: str, etl_run_id: str
-) -> str:
-    return f"{prefix}/{basename}_{snapshot_date}_{etl_run_id}.csv"
-
-
-def load_to_supabase_storage(
-    csv_file: str, bucket_name: str, object_key: str
-) -> Dict[str, str]:
-    if not os.path.exists(csv_file):
-        logger.error(f"CSV file not found: {csv_file}")
-        raise FileNotFoundError(f"CSV file not found: {csv_file}")
-
-    storage = _get_supabase_storage_config()
-    url = storage["url"].rstrip("/")
-    upload_url = f"{url}/storage/v1/object/{bucket_name}/{object_key}"
-    headers = {
-        "apikey": storage["service_key"],
-        "Authorization": f"Bearer {storage['service_key']}",
-        "Content-Type": "text/csv",
-        "x-upsert": "true",
+    now = datetime.now(timezone.utc)
+    return {
+        "etl_run_id": etl_run_id or now.strftime("%Y%m%d"),
+        "snapshot_date": snapshot_date or now.strftime("%Y%m%d"),
     }
 
-    logger.info(
-        "Uploading %s to Supabase Storage: %s/%s", csv_file, bucket_name, object_key
-    )
-    with open(csv_file, "rb") as f:
-        response = requests.post(
-            upload_url,
-            headers=headers,
-            data=f,
-            timeout=120,
-        )
 
-    if response.status_code >= 400:
-        logger.error(
-            "Supabase Storage upload failed (%s): %s",
-            response.status_code,
-            response.text,
-        )
-        response.raise_for_status()
+def _build_manifest_payload(
+    *,
+    bucket_name: str,
+    snapshot_date: str,
+    etl_run_id: str,
+    raw_object_key: Optional[str],
+    transformed_object_key: Optional[str],
+) -> bytes:
+    """Build the JSON payload containing metadata about the latest ETL run and uploaded files for downstream jobs."""
+    return json.dumps(
+        {
+            "bucket": bucket_name,
+            "latest_scraped_date": snapshot_date,
+            "etl_run_id": etl_run_id,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "raw_file": raw_object_key,
+            "transformed_file": transformed_object_key,
+        },
+        indent=2,
+    ).encode("utf-8")
 
-    logger.info("Supabase Storage upload successful for %s", object_key)
-    return {"file_path": csv_file, "bucket": bucket_name, "object_key": object_key}
 
-
-def load_json_to_supabase_storage(
-    payload: Dict[str, str], bucket_name: str, object_key: str
-) -> Dict[str, str]:
-    storage = _get_supabase_storage_config()
-    url = storage["url"].rstrip("/")
-    upload_url = f"{url}/storage/v1/object/{bucket_name}/{object_key}"
-    headers = {
-        "apikey": storage["service_key"],
-        "Authorization": f"Bearer {storage['service_key']}",
-        "Content-Type": "application/json",
-        "x-upsert": "true",
-    }
-
-    logger.info(
-        "Uploading JSON manifest to Supabase Storage: %s/%s", bucket_name, object_key
-    )
+def _upload_object(
+    *,
+    upload_url: str,
+    object_key: str,
+    headers: Dict[str, str],
+    payload,
+) -> None:
+    """Upload a file or JSON payload to Supabase Storage using the provided pre-signed URL and headers."""
     response = requests.post(
         upload_url,
         headers=headers,
-        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
-        timeout=120,
+        data=payload,
+        timeout=UPLOAD_TIMEOUT_SECONDS,
     )
 
     if response.status_code >= 400:
         logger.error(
-            "Supabase Storage JSON upload failed (%s): %s",
+            "Supabase upload failed for %s (%s): %s",
+            object_key,
             response.status_code,
             response.text,
         )
         response.raise_for_status()
-
-    logger.info("Supabase Storage JSON upload successful for %s", object_key)
-    return {"bucket": bucket_name, "object_key": object_key}
-
-
-def load_csv(
-    csv_file: str = DEFAULT_FILE,
-    bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
-    prefix: str = DEFAULT_SUPABASE_TRANSFORMED_PREFIX,
-):
-    """Upload transformed CSV data to Supabase Storage."""
-    logger.info("STARTING DATA LOAD TO SUPABASE STORAGE (TRANSFORMED)")
-    etl_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
-    snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    object_key = _build_object_key(
-        prefix=prefix,
-        basename="transformed",
-        snapshot_date=snapshot_date,
-        etl_run_id=etl_run_id,
-    )
-    return load_to_supabase_storage(
-        csv_file=csv_file, bucket_name=bucket_name, object_key=object_key
-    )
 
 
 def load_files_to_supabase(
     raw_file: str = DEFAULT_RAW_FILE,
-    transformed_file: str = DEFAULT_FILE,
+    transformed_file: str = DEFAULT_TRANSFORMED_FILE,
     bucket_name: str = DEFAULT_SUPABASE_STORAGE_BUCKET,
     raw_prefix: str = DEFAULT_SUPABASE_RAW_PREFIX,
     transformed_prefix: str = DEFAULT_SUPABASE_TRANSFORMED_PREFIX,
     etl_run_id: Optional[str] = None,
     snapshot_date: Optional[str] = None,
-):
-    """Upload raw and transformed CSV files into Supabase Storage."""
-    logger.info("STARTING DATA LOAD TO SUPABASE STORAGE (RAW + TRANSFORMED)")
-    results = {}
-    etl_run_id = etl_run_id or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
-    snapshot_date = snapshot_date or datetime.now(timezone.utc).strftime("%Y%m%d")
+) -> Dict[str, Dict[str, str]]:
+    """Upload raw/transformed snapshots and update a manifest for downstream jobs."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-    if raw_file and os.path.exists(raw_file):
-        raw_key = _build_object_key(
-            prefix=raw_prefix,
-            basename="raw",
-            snapshot_date=snapshot_date,
-            etl_run_id=etl_run_id,
+    if not supabase_url or not service_role_key:
+        raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+
+    supabase_url = supabase_url.strip().rstrip("/")
+    service_role_key = service_role_key.strip()
+    run_metadata = _resolve_run_metadata(
+        etl_run_id=etl_run_id,
+        snapshot_date=snapshot_date,
+    )
+    headers = {
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
+        "x-upsert": "true",
+    }
+    results: Dict[str, Dict[str, str]] = {}
+
+    logger.info(" Starting to upload data csv files to Supabase storage")
+    upload_targets = [
+        {
+            "result_key": "raw",
+            "file_path": raw_file,
+            "prefix": raw_prefix,
+            "basename": "raw",
+        },
+        {
+            "result_key": "transformed",
+            "file_path": transformed_file,
+            "prefix": transformed_prefix,
+            "basename": "transformed",
+        },
+    ]
+
+    for target in upload_targets:
+        file_path = target["file_path"]
+        if not file_path:
+            logger.warning("%s file not provided, skipping", target["result_key"])
+            continue
+
+        if not os.path.exists(file_path):
+            logger.warning(
+                "%s file not found, skipping: %s",
+                target["result_key"],
+                file_path,
+            )
+            continue
+
+        object_key = (
+            f"{target['prefix']}/{target['basename']}_" f"{run_metadata['snapshot_date']}_{run_metadata['etl_run_id']}.csv"
         )
-        results["raw"] = load_to_supabase_storage(
-            csv_file=raw_file,
-            bucket_name=bucket_name,
-            object_key=raw_key,
+        upload_url = f"{supabase_url}/storage/v1/object/{bucket_name}/{object_key}"
+
+        logger.info(
+            "Uploading %s file to %s/%s",
+            target["result_key"],
+            bucket_name,
+            object_key,
         )
-        latest_manifest_key = f"{raw_prefix}/_latest.json"
-        latest_manifest_payload = {
-            "path": raw_key,
-            "run_id": etl_run_id,
-            "snapshot_date": snapshot_date,
+        with open(file_path, "rb") as source_file:
+            _upload_object(
+                upload_url=upload_url,
+                object_key=object_key,
+                headers={**headers, "Content-Type": "text/csv"},
+                payload=source_file,
+            )
+
+        results[target["result_key"]] = {
+            "bucket": bucket_name,
+            "object_key": object_key,
+            "file_path": file_path,
         }
-        results["raw_latest_manifest"] = load_json_to_supabase_storage(
-            payload=latest_manifest_payload,
-            bucket_name=bucket_name,
-            object_key=latest_manifest_key,
-        )
-    else:
-        logger.warning("Raw file not found or not provided, skipping: %s", raw_file)
-
-    if transformed_file and os.path.exists(transformed_file):
-        transformed_key = _build_object_key(
-            prefix=transformed_prefix,
-            basename="transformed",
-            snapshot_date=snapshot_date,
-            etl_run_id=etl_run_id,
-        )
-        results["transformed"] = load_to_supabase_storage(
-            csv_file=transformed_file,
-            bucket_name=bucket_name,
-            object_key=transformed_key,
-        )
-    else:
-        logger.warning(
-            "Transformed file not found or not provided, skipping: %s", transformed_file
-        )
 
     if not results:
-        raise FileNotFoundError(
-            "No files loaded. Provide valid raw/transformed file paths."
-        )
+        raise FileNotFoundError("No files loaded. Provide valid raw/transformed file paths.")
+
+    logger.info(" Starting to upload manifest to Supabase storage")
+    manifest_object_key = f"{raw_prefix}/_latest.json"
+    manifest_url = f"{supabase_url}/storage/v1/object/{bucket_name}/{manifest_object_key}"
+    manifest_payload = _build_manifest_payload(
+        bucket_name=bucket_name,
+        snapshot_date=run_metadata["snapshot_date"],
+        etl_run_id=run_metadata["etl_run_id"],
+        raw_object_key=results.get("raw", {}).get("object_key"),
+        transformed_object_key=results.get("transformed", {}).get("object_key"),
+    )
+
+    logger.info("Uploading manifest to %s/%s", bucket_name, manifest_object_key)
+    _upload_object(
+        upload_url=manifest_url,
+        object_key=manifest_object_key,
+        headers={**headers, "Content-Type": "application/json"},
+        payload=manifest_payload,
+    )
+
+    results["raw_latest_manifest"] = {
+        "bucket": bucket_name,
+        "object_key": manifest_object_key,
+    }
 
     logger.info("Supabase Storage uploads completed successfully")
     return results
 
 
 if __name__ == "__main__":
-    logger.info(f"RUNNING IN {config.ENV_TYPE.upper()} ENVIRONMENT")
+    logger.info("RUNNING IN %s ENVIRONMENT", config.ENV_TYPE.upper())
     logger.info("\nConfiguration:")
-    logger.info(f"  Raw file: {DEFAULT_RAW_FILE}")
-    logger.info(f"  Transformed file: {DEFAULT_FILE}")
-    logger.info(f"  Supabase storage bucket: {DEFAULT_SUPABASE_STORAGE_BUCKET}")
-    logger.info(f"  Supabase raw prefix: {DEFAULT_SUPABASE_RAW_PREFIX}")
-    logger.info(f"  Supabase transformed prefix: {DEFAULT_SUPABASE_TRANSFORMED_PREFIX}")
+    logger.info("  Raw file: %s", DEFAULT_RAW_FILE)
+    logger.info("  Transformed file: %s", DEFAULT_TRANSFORMED_FILE)
+    logger.info("  Supabase storage bucket: %s", DEFAULT_SUPABASE_STORAGE_BUCKET)
+    logger.info("  Supabase raw prefix: %s", DEFAULT_SUPABASE_RAW_PREFIX)
+    logger.info("  Supabase transformed prefix: %s", DEFAULT_SUPABASE_TRANSFORMED_PREFIX)
 
     try:
         start_time = datetime.now(timezone.utc)
         load_files_to_supabase()
         duration = datetime.now(timezone.utc) - start_time
-
         logger.info("DATA LOAD COMPLETED SUCCESSFULLY")
-        logger.info(f"Duration: {duration}")
-
-    except Exception as e:
+        logger.info("Duration: %s", duration)
+    except Exception as exc:
         logger.error("DATA LOAD FAILED")
-        logger.error(f"Error: {str(e)}")
-        exit(1)
+        logger.error("Error: %s", str(exc))
+        raise SystemExit(1)

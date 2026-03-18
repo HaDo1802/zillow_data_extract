@@ -1,8 +1,6 @@
 from airflow.decorators import dag, task
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
-import pandas as pd
-from typing import Dict, Any
+from typing import Any, Dict
 
 DEFAULT_LOCATIONS = ["Las Vegas, NV"]
 DEFAULT_MAX_PAGES = 2
@@ -69,9 +67,7 @@ def real_estate_etl_pipeline():
             # JSON-safe return
             return {
                 "records_extracted": int(len(df)),
-                "unique_properties": (
-                    int(df["zpid"].nunique()) if "zpid" in df.columns else 0
-                ),
+                "unique_properties": (int(df["zpid"].nunique()) if "zpid" in df.columns else 0),
                 "file_path": str(output_file),
                 "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
             }
@@ -88,9 +84,7 @@ def real_estate_etl_pipeline():
 
         # Check minimum records
         if extraction_metrics["records_extracted"] < 5:
-            raise ValueError(
-                f"Too few records: {extraction_metrics['records_extracted']}"
-            )
+            raise ValueError(f"Too few records: {extraction_metrics['records_extracted']}")
 
         # Validate file exists and is readable
         df = pd.read_csv(extraction_metrics["file_path"])
@@ -104,9 +98,7 @@ def real_estate_etl_pipeline():
         return True
 
     @task()
-    def transform_data(
-        extraction_metrics: Dict[str, any], paths: Dict[str, str]
-    ) -> Dict[str, any]:
+    def transform_data(extraction_metrics: Dict[str, any], paths: Dict[str, str]) -> Dict[str, any]:
         """
         Transform and clean data.
 
@@ -121,20 +113,15 @@ def real_estate_etl_pipeline():
 
         input_file = extraction_metrics["file_path"]
 
-        df_transformed, timestamped_file, latest_file = main_transform(
-            input_file=input_file, output_dir=paths["transformed"]
-        )
+        df_transformed, timestamped_file, latest_file = main_transform(input_file=input_file, output_dir=paths["transformed"])
 
-        transformation_efficiency = (
-            len(df_transformed) / extraction_metrics["records_extracted"] * 100
-        )
+        transformation_efficiency = len(df_transformed) / extraction_metrics["records_extracted"] * 100
 
         return {
             "records_transformed": len(df_transformed),
             "file_path": str(latest_file),
             "transformation_efficiency": round(transformation_efficiency, 2),
-            "records_filtered": extraction_metrics["records_extracted"]
-            - len(df_transformed),
+            "records_filtered": extraction_metrics["records_extracted"] - len(df_transformed),
         }
 
     @task()
@@ -147,9 +134,7 @@ def real_estate_etl_pipeline():
         checks = {
             "no_null_ids": df["zillow_property_id"].notna().all(),
             "positive_prices": (df["price"] > 0).all(),
-            "valid_bedrooms": (
-                (df["bedrooms"] >= 0).all() if "bedrooms" in df.columns else True
-            ),
+            "valid_bedrooms": ((df["bedrooms"] >= 0).all() if "bedrooms" in df.columns else True),
             "no_duplicates": not df["zillow_property_id"].duplicated().any(),
             "has_districts": df["vegas_district"].notna().all(),
         }
@@ -168,18 +153,21 @@ def real_estate_etl_pipeline():
         }
 
     @task()
-    def load_supabase(
-        transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]
-    ) -> Dict[str, any]:
+    def load_supabase(transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]) -> Dict[str, any]:
         """Load data to Supabase."""
+        from airflow.decorators import get_current_context
         from etl.load import load_files_to_supabase
 
+        context = get_current_context()
+        logical_date = context["data_interval_start"]
         raw_file_path = extraction_metrics["file_path"]
         transformed_file_path = transform_metrics["file_path"]
 
         results = load_files_to_supabase(
             raw_file=raw_file_path,
             transformed_file=transformed_file_path,
+            etl_run_id=logical_date.strftime("%Y%m%d"),
+            snapshot_date=logical_date.strftime("%Y%m%d"),
         )
         return {"supabase_success": True, "results": results}
 
@@ -221,15 +209,7 @@ def real_estate_etl_pipeline():
     notify = send_notification(extraction, transformation, quality, supabase)
 
     # Dependencies
-    (
-        paths
-        >> extraction
-        >> validation
-        >> transformation
-        >> quality
-        >> supabase
-        >> notify
-    )
+    (paths >> extraction >> validation >> transformation >> quality >> supabase >> notify)
 
 
 # Instantiate the DAG
