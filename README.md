@@ -3,50 +3,22 @@
 # Real Estate Data Pipeline
 
 ![Real Estate Data Pipeline Cover Image](image/cover_image.png)
-This project implements a Extract-Transform-Load (ETL) pipeline for real estate listings data, designed to process and analyze real-time property listings. The pipeline extracts property data from Zillow API, leveraging Apache Airflow and Docker to automate data collection and storage for downstream analytics and machine learning applications.
+
+This project is a production-oriented ETL pipeline for Zillow real estate listings. It extracts listing data from the Zillow API through RapidAPI, transforms it into a cleaner analytics-ready dataset, and stages both raw and transformed outputs in Supabase Storage for downstream modeling and reporting.
+
+The pipeline is orchestrated with Apache Airflow and is designed around two operational goals:
+
+- reproducible runs for the same logical date
+- clear separation between ingestion/staging and downstream transformation
 
 ---
 
-## 🗂 Project Structure
+## Overview
 
-```
-.
-├── dags/                      # Airflow DAG definitions
-│   └── TaskAPI_etl_dag.py     # Main pipeline workflow
-├── etl/                       # ETL modules
-│   ├── extract.py            # API data extraction
-│   ├── transform.py          # Data cleaning & enrichment
-│   ├── load.py               # Supabase Storage staging (raw + transformed + manifest)
-│   ├── main_etl.py           # Pipeline orchestrator
-│   └── email_notifier.py     # Script for customized email
-├── data/                      # Data storage (gitignored)
-│   ├── raw/                  # Extracted data snapshots
-│   └── transformed/          # Cleaned data ready for loading
-├── docker/
-│   ├── docker-compose.yaml   # Service orchestration
-│   └── Dockerfile            # Custom Airflow image
-├── .env
-├── requirements.txt          # Packages dependencies
-└── README.md
-```
+**Pipeline flow**
 
----
-
-## ⚙️ Technology Stack
-
-- **Data Source**: Zillow API (RapidAPI)
-- **Data Processing**: Python 3.9+ with Pandas, NumPy
-- **Workflow Orchestration**: Apache Airflow
-- **Storage**: Supabase Storage (staging for downstream processing)
-- **Containerization**: Docker
-- **Email Notifications**: SMTP (Gmail)
-
----
-
-## 🧱 Data Architecture
-
-```markdown
-Zillow API --> Raw CSV --> Supabase Storage --> Downstream Modeling/Analytics --> Email Notification
+```text
+Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics / Modeling
 ```
 
 <div align="center">
@@ -55,148 +27,153 @@ Zillow API --> Raw CSV --> Supabase Storage --> Downstream Modeling/Analytics --
 
 </div>
 
-### 1. Data Source
+**Current scope**
 
-The project processes real estate listings from the **Zillow API** via [RapidAPI](https://rapidapi.com/apimaker/api/zillow-com1/playground), focusing on the Las Vegas market with plans to expand to additional locations. Current extraction targets multiple neighborhoods including **Summerlin, Henderson, Downtown Las Vegas, and surrounding areas**.
-
-### 2. Data Processing Pipeline
-
-#### **Data Extraction**
-
-- Automatically fetch property listings from Zillow API via RapidAPI
-- Extract comprehensive property details including property idetification, prices, location, and other data
-- Store raw data with timestamps in `raw_data_YYYYMMDD.csv`, allowing audit tracing for daily run
-- Features intelligent pagination and rate limiting for API compliance
-- Use deterministic page sampling per `snapshot_date` so retries for the same logical run fetch the same page set
-- Multi-location support with configurable location list
-
-#### **Data Transformation & Cleaning**
-
-- Parse and standardize address components (street, city, state, zip)
-- Normalize lot area measurements (acres to sqft conversion)
-- Calculate derived fields (listing dates, district classification)
-- Extract listing features (FSBA status, open house indicators)
-- Handle missing values and validate data quality
-- Generate cleaned dataset with consistent schema stored in `transformed_YYYYMMDD.csv`
-
-#### **Supabase Storage Staging**
-
-- Upload raw and transformed snapshots to Supabase Storage for downstream ingestion
-- Publish a `_latest.json` manifest so downstream jobs can discover the latest logical snapshot date and object paths
-- Preserve daily snapshots for auditing and backfills
-- Decouple this ETL from downstream loading and transformations
-- Use logical-date-based object keys so retries for the same run overwrite the same artifacts instead of creating new ones
-
-### 3. Data Quality Framework
-
-- Essential field validation (property ID, etl_run_id) use for duplicate detection and removal
-- Pipeline monitoring via email notifications
-- Supabase upload validation (file presence and successful transfer)
+- Source: Zillow API via [RapidAPI](https://rapidapi.com/apimaker/api/zillow-com1/playground)
+- Market focus: Las Vegas, NV
+- Orchestration: Apache Airflow
+- Storage layer: Supabase Storage
+- Output artifacts: raw CSV, transformed CSV, and `_latest.json` manifest
 
 ---
 
-## 🚀 Project Components
+## Repository Structure
 
-### 📊 Airflow DAGs
+```text
+.
+├── dags/
+│   └── TaskAPI_etl_dag.py
+├── etl/
+│   ├── extract.py
+│   ├── transform.py
+│   ├── load.py
+│   ├── main_etl.py
+│   └── email_notifier.py
+├── data/
+│   ├── raw/
+│   └── transformed/
+├── tests/
+│   ├── test_extract.py
+│   ├── test_load.py
+│   └── test_transform.py
+├── .github/workflows/
+│   └── ci-cd.yml
+├── requirements.txt
+└── README.md
+```
 
-Located in `dags/`:
+**Core modules**
 
-- **Pipeline orchestration** for automated data collection every day at 6 AM
-- **Task scheduling** with dependency management
-- **Retry logic** for fault-tolerant execution
-- **Logical-date-driven execution** so retries reuse the same snapshot identity
-- **Email notifications** on success/failure
-- **Execution tracking** via Airflow web UI (port 8080)
+- `etl/extract.py`: fetches Zillow listings with controlled pagination and rate limiting
+- `etl/transform.py`: cleans, standardizes, and enriches the raw dataset
+- `etl/load.py`: uploads raw and transformed outputs to Supabase Storage and publishes a manifest
+- `etl/main_etl.py`: local entrypoint for running the ETL outside Airflow
+- `dags/TaskAPI_etl_dag.py`: Airflow TaskFlow DAG for scheduled execution
 
-### 🛠 ETL Modules
+---
 
-Located in `etl/`:
+## Data Pipeline
 
-- **extract.py**: Multi-location API scraper with pagination
-- **transform.py**: Data cleaning, feature engineering, validation
-- **load.py**: Supabase Storage staging for raw + transformed files plus manifest
-- **main_etl.py**: Standalone ETL runner for manual execution
-- **email_notifier.py**: SMTP notification service with HTML templates
+### Extract
 
-### 🧭 Why UTC Datetime Standard
+- Pulls listing data from the Zillow API via RapidAPI
+- Supports configurable locations and page limits
+- Uses deterministic page sampling when `snapshot_date` is provided
+- Writes `raw_latest.csv` and a date-stamped raw snapshot under `data/raw/`
 
-All timestamps in this pipeline are generated in UTC. This is a best practice for distributed data systems because it:
+### Transform
 
-- Prevents timezone drift and daylight savings issues
-- Keeps scheduling consistent across Airflow, Supabase Storage, and downstream systems
-- Makes historical comparisons and backfills reliable
+- Standardizes address and listing fields
+- Cleans missing or inconsistent values
+- Enriches the dataset with derived features used downstream
+- Writes `transformed_latest.csv` and a date-stamped transformed snapshot under `data/transformed/`
 
-### 🧩 Downstream Postgres + Transformations
+### Load
 
-This project intentionally does not load into Postgres. Instead, it stages raw and transformed snapshots in Supabase Storage and hands off loading and additional transformations to a downstream project where the final modeling happens. This keeps the pipeline modular and avoids duplicate transformations or conflicting schemas across projects.
+- Uploads raw and transformed CSVs to Supabase Storage
+- Publishes `raw/_latest.json` so downstream jobs can resolve the latest logical snapshot
+- Stores stable object keys derived from `snapshot_date` and `etl_run_id`
+
+---
+
+## Idempotency And Reproducibility
+
+The pipeline is designed to be retry-safe and reproducible at the artifact level for the same logical date.
+
+**What is deterministic / Idempotent**
+
+- Airflow passes `data_interval_start` downstream as `snapshot_date` and `etl_run_id`
+- extraction seeds page sampling from `snapshot_date`, so retries fetch the same page set
+- load object keys are derived from the logical date rather than wall-clock retry time
+- Supabase uploads use upsert behavior, so retries overwrite the same storage objects
+- `_latest.json` gives downstream consumers a stable pointer to the current logical snapshot
+
+Note: The pipeline is designed to be idempotent for run identity and artifact paths, while exact row-level content still depends on the upstream source system.
+
+---
+
+## Design Choices
+
+### Why Airflow
+
+- task orchestration with explicit dependencies
+- retry support and scheduling
+- operational visibility through the Airflow UI
+- cleaner production scheduling than ad hoc cron jobs
+
+### Why Supabase Storage
+
+- keeps ingestion separate from downstream warehouse/modeling logic
+- provides durable storage for raw and transformed artifacts
+- supports replay and backfill workflows
+- lets downstream jobs consume a manifest instead of guessing file paths
+
+### Why UTC
+
+All pipeline timestamps use UTC to avoid timezone drift, daylight saving issues, and ambiguous historical comparisons across systems.
+
+---
+
+## Running The Pipeline
+
+### Local ETL run
+
+```bash
+python etl/main_etl.py
+```
+
+### Airflow DAG
+
+Main DAG:
+
+```text
+dags/TaskAPI_etl_dag.py
+```
+
+The DAG is scheduled daily and passes Airflow logical date metadata into extract and load so retries remain logically consistent.
+
+### Tests
+
+```bash
+pytest tests/ -v
+```
+
+---
+
+## Operational Notes
+
+- The pipeline auto-detects local vs Airflow-style execution paths
+- Logging is centralized through the project logger
+- Email notifications are sent on pipeline success or failure
+
+---
+
+## Downstream Handoff
+
+This project stops at staged delivery. It does not load directly into a warehouse table. Instead, it publishes raw and transformed snapshots to Supabase Storage so downstream systems can consume a stable, versioned handoff layer.
 
 Downstream project:
 
-```
+```text
 https://github.com/HaDo1802/zillow_data_transformation
 ```
-
----
-
-## 🚀 Key Features
-
-### Comprehensive Data Extraction
-
-- **Multi-location support**: Configurable list of target locations
-- **Rate limiting**: API-compliant request throttling (0.2s between calls)
-- **Pagination handling**: Automatic traversal of result pages
-- **Error recovery**: Robust exception handling with retries
-
-### Snapshot-Based Storage
-
-- **Historical tracking**: Full audit trail of all property changes
-- **Price history**: Track listing price changes over time
-- **Point-in-time queries**: Analyze market state at any date
-- **Stable retries**: Logical-date-based object keys let the same run overwrite the same artifacts safely
-
-### Production-Ready Operations
-
-- **Automated scheduling**: Runs every 10 minutes via Airflow
-- **Email notifications**: Success/failure alerts with execution details
-- **Comprehensive logging**: Multi-level logs for debugging, documented inside <a href="file:///Users/hado/Desktop/Career/Coding/Data%20Engineer/Project/real_estate_project/etl_log/log.txt">etl_log/log.txt</a>
-- **Environment flexibility**: Auto-detects Docker vs local execution
-- **Containerized deployment**: Docker Compose for consistent environments
-- **Centralize Configuration**: Leveraging modular logger and .env variables configuration, making it easier to scale and ensure safety
-
-### Idempotency And Reproducibility
-
-- **Logical-date-based run identity**: Airflow passes `data_interval_start` downstream as `snapshot_date` and `etl_run_id`
-- **Deterministic extraction**: page sampling is seeded from `snapshot_date`, so retries for the same logical date request the same page set
-- **Deterministic load paths**: raw and transformed object keys are derived from the logical date, not wall-clock retry time
-- **Stable latest pointer**: `_latest.json` tracks the latest logical snapshot for downstream consumers
-- **Practical caveat**: the pipeline is designed to be idempotent and reproducible at the artifact level, but exact row content can still change if the upstream Zillow API changes between retries
-
----
-
-## 🎯 Design Decisions
-
-### Why Snapshot-Based Storage?
-
-Traditional upsert strategies overwrite historical data, losing valuable time-series information. This pipeline uses **append-only history** with a **current view** to enable:
-
-- Price trend analysis over time
-- Market velocity metrics (average days to sale)
-- Point-in-time market snapshots
-- Complete audit trail for compliance
-
-### Why Airflow Over Cron?
-
-- **Visual monitoring**: Web UI for pipeline status and logs
-- **Dependency management**: Task execution order enforcement
-- **Retry logic**: Automatic failure recovery with backoff
-- **Scalability**: Easy migration to distributed execution
-- **Extensibility**: Rich ecosystem of providers and operators
-
-### Why Supabase Storage Staging?
-
-- **Decoupling**: Keeps extraction and transformation independent from downstream loading
-- **Durability**: Reliable storage for snapshots and reprocessing
-- **Backfills**: Easy to replay historical runs
-- **Interoperability**: Works across different downstream systems
-
----

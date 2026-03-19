@@ -1,9 +1,9 @@
 name: Real Estate ETL Pipeline CI/CD
 
 on:
-  # enable scheduling 
-  schedule:
-    - cron: "0 6 * * *" # Daily at 6 AM UTC
+  # disable scheduling due to running out of api quota
+  # schedule:
+  #   - cron: "0 6 * * *" # Daily at 6 AM UTC
   push:
     branches:
       - main
