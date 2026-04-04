@@ -6,7 +6,7 @@
   <img src="image/cover_image.png" alt="Real Estate Data Pipeline Cover Image" width="85%" />
 </div>
 
-This project is a production-oriented ETL pipeline for Zillow real estate listings. It extracts listing data from the Zillow API through RapidAPI, transforms it into a cleaner analytics-ready dataset, and stages both raw and transformed outputs in Supabase Storage for downstream modeling and reporting.
+This project is a production-oriented EL pipeline for Zillow real estate listings data. It extracts property data from the Zillow API, applies light cleaning, and stages both raw and transformed outputs in Supabase Storage for downstream transformation and modeling layers.
 
 The pipeline is orchestrated with Apache Airflow and is designed around two operational goals:
 
@@ -16,6 +16,15 @@ The pipeline is orchestrated with Apache Airflow and is designed around two oper
 ---
 
 ## Overview
+
+**Tech Stack**
+
+![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-CB2B83?style=for-the-badge&logo=apacheairflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
 
 **Pipeline flow**
 
@@ -76,7 +85,17 @@ Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics /
 
 ---
 
-## Data Pipeline
+## Airflow Orchestration
+
+This pipeline is orchestrated in Airflow and runs inside Docker. The Airflow UI helps inspect DAG state, task logs, retries, and end-to-end pipeline runs.
+
+<div align="center">
+  <img src="image/airflow_run.png" alt="Airflow DAG run view" width="85%" />
+</div>
+
+---
+
+## Data Pipeline Details
 
 ### Extract
 
@@ -116,7 +135,7 @@ Note: The pipeline is designed to be idempotent for run identity and artifact pa
 
 ---
 
-## Design Choices
+## Architecture Design Rationale
 
 ### Why Airflow
 
@@ -127,10 +146,17 @@ Note: The pipeline is designed to be idempotent for run identity and artifact pa
 
 ### Why Supabase Storage
 
+- Free and easy to set up
 - keeps ingestion separate from downstream warehouse/modeling logic
 - provides durable storage for raw and transformed artifacts
 - supports replay and backfill workflows
 - lets downstream jobs consume a manifest instead of guessing file paths
+
+### Why _latest.json
+
+- Supabase Storage is object storage, not a warehouse table with native load metadata or a built-in `COPY INTO` history layer
+- Downstream jobs need a stable way to discover the most recent successful raw snapshot without scanning folders or inferring file names.
+- This keeps the handoff contract explicit and makes downstream consumption simpler, more reliable, and easier to automate.
 
 ### Why UTC
 
