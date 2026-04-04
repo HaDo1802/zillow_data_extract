@@ -17,6 +17,15 @@ from utils.config import config  # noqa: E402
 logger = get_logger(__name__)
 
 
+def _write_csv_atomic(df: pd.DataFrame, destination: str) -> None:
+    """Write CSV via a temp file and atomic rename to avoid bind-mount write issues."""
+    directory = os.path.dirname(destination)
+    temp_path = os.path.join(directory, f".{os.path.basename(destination)}.tmp")
+
+    df.to_csv(temp_path, index=False)
+    os.replace(temp_path, destination)
+
+
 def fetch_zillow(location, max_pages=2, snapshot_date=None):
     """Fetch property listings from Zillow API for a specific location.
 
@@ -216,12 +225,12 @@ def fetch_all_locations(locations=None, max_pages=5, snapshot_date=None):
     os.makedirs(raw_dir, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     raw_timestamped = os.path.join(raw_dir, f"raw_{timestamp}.csv")
-    df_combined.to_csv(raw_timestamped, index=False)  # Consider using Polars for optimizing large files
+    _write_csv_atomic(df_combined, raw_timestamped)
     logger.info(f"Saved timestamped file: {raw_timestamped}")
 
     # Save latest file (for transform script to read)
     raw_latest = os.path.join(raw_dir, "raw_latest.csv")
-    df_combined.to_csv(raw_latest, index=False)
+    _write_csv_atomic(df_combined, raw_latest)
     logger.info(f"Saved latest file: {raw_latest}")
 
     return df_combined

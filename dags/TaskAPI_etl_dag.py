@@ -46,12 +46,10 @@ def real_estate_etl_pipeline():
         import os
         import logging
         from datetime import datetime, timezone
-        from airflow.decorators import get_current_context
         from etl.extract import fetch_all_locations
 
         log = logging.getLogger("airflow.task")
-        context = get_current_context()
-        snapshot_date = context["data_interval_start"].strftime("%Y%m%d")
+        snapshot_date = datetime.now(timezone.utc).strftime("%Y%m%d")
 
         output_file = os.path.join(paths["raw"], "raw_latest.csv")
         log.info("Starting extract_zillow. Will write to: %s", output_file)
@@ -67,9 +65,10 @@ def real_estate_etl_pipeline():
             if df is None or df.empty:
                 raise ValueError("No data extracted from API (df is empty)")
 
-            # IMPORTANT: actually write the file
-            df.to_csv(output_file, index=False)
-            log.info("Wrote raw CSV successfully: %s (rows=%s)", output_file, len(df))
+            if not os.path.exists(output_file):
+                raise FileNotFoundError(f"Extractor did not persist expected output file: {output_file}")
+
+            log.info("Using extractor output file: %s (rows=%s)", output_file, len(df))
 
             # JSON-safe return
             return {
@@ -162,19 +161,18 @@ def real_estate_etl_pipeline():
     @task()
     def load_supabase(transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]) -> Dict[str, any]:
         """Load data to Supabase."""
-        from airflow.decorators import get_current_context
+        from datetime import datetime, timezone
         from etl.load import load_files_to_supabase
 
-        context = get_current_context()
-        logical_date = context["data_interval_start"]
+        run_date = datetime.now(timezone.utc).strftime("%Y%m%d")
         raw_file_path = extraction_metrics["file_path"]
         transformed_file_path = transform_metrics["file_path"]
 
         results = load_files_to_supabase(
             raw_file=raw_file_path,
             transformed_file=transformed_file_path,
-            etl_run_id=logical_date.strftime("%Y%m%d"),
-            snapshot_date=logical_date.strftime("%Y%m%d"),
+            etl_run_id=run_date,
+            snapshot_date=run_date,
         )
         return {"supabase_success": True, "results": results}
 

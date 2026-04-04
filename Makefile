@@ -16,7 +16,7 @@ help:
 
 install:
 	pip install --upgrade pip
-	pip install -r requirements.txt
+	pip install -r requirements-dev.txt
 
 test:
 	pytest tests/ -v --cov=etl --cov-report=term-missing
@@ -36,20 +36,20 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 
 docker-up:
-	docker-compose up -d
+	docker compose up --build -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-restart:
-	docker-compose down
-	docker-compose up -d
+	docker compose down
+	docker compose up --build -d
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 airflow-init:
-	docker-compose run airflow-webserver airflow db init
+	docker compose run --rm airflow-init
 
 run-etl:
 	python etl/main_etl.py

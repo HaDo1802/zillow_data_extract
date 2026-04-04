@@ -2,7 +2,9 @@
 
 # Real Estate Data Pipeline
 
-![Real Estate Data Pipeline Cover Image](image/cover_image.png)
+<div align="center">
+  <img src="image/cover_image.png" alt="Real Estate Data Pipeline Cover Image" width="85%" />
+</div>
 
 This project is a production-oriented ETL pipeline for Zillow real estate listings. It extracts listing data from the Zillow API through RapidAPI, transforms it into a cleaner analytics-ready dataset, and stages both raw and transformed outputs in Supabase Storage for downstream modeling and reporting.
 
@@ -58,6 +60,8 @@ Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics /
 │   └── test_transform.py
 ├── .github/workflows/
 │   └── ci-cd.yml
+├── requirements-airflow.txt
+├── requirements-dev.txt
 ├── requirements.txt
 └── README.md
 ```
@@ -139,6 +143,7 @@ All pipeline timestamps use UTC to avoid timezone drift, daylight saving issues,
 ### Local ETL run
 
 ```bash
+pip install -r requirements.txt
 python etl/main_etl.py
 ```
 
@@ -152,9 +157,18 @@ dags/TaskAPI_etl_dag.py
 
 The DAG is scheduled daily and passes Airflow logical date metadata into extract and load so retries remain logically consistent.
 
+### Airflow with Docker
+
+```bash
+docker compose up --build
+```
+
+The Airflow image installs dependencies from `requirements-airflow.txt`. Local development and testing use `requirements-dev.txt`.
+
 ### Tests
 
 ```bash
+pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 

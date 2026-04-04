@@ -1,6 +1,6 @@
 x-airflow-common: &airflow-common
   build: .
-  image: custom-airflow:2.9.2
+  image: real-estate-extract-airflow:2.9.2
   env_file:
     - .env
   environment: &airflow-common-env
