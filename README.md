@@ -164,7 +164,7 @@ All pipeline timestamps use UTC to avoid timezone drift, daylight saving issues,
 
 ---
 
-## Running The Pipeline
+## Getting Started
 
 ### Local ETL run
 
