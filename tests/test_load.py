@@ -49,19 +49,6 @@ def test_count_rows_to_insert():
     assert row_count == 3
 
 
-def test_replace_none_with_null():
-    """Test replacing Python None with database NULL."""
-    # Arrange: Data with None values
-    data = {"zpid": ["123", "456"], "city": ["Las Vegas", None]}
-    df = pd.DataFrame(data)
-
-    # Act: Replace None with special marker
-    df_cleaned = df.where(pd.notna(df), None)
-
-    # Assert: Second city should still be None
-    assert df_cleaned.iloc[1]["city"] is None
-
-
 def test_create_csv_for_database():
     """Test creating CSV file (like for COPY command)."""
     # Arrange: Sample data

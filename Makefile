@@ -1,8 +1,10 @@
-.PHONY: help install test lint format clean docker-up docker-down docker-restart logs airflow-init run-etl
+.PHONY: help install install-dev sync test lint format clean docker-up docker-down docker-restart logs airflow-init run-etl all
 
 help:
 	@echo "Available commands:"
-	@echo "  make install          - Install Python dependencies"
+	@echo "  make install          - Install production dependencies (uv sync)"
+	@echo "  make install-dev      - Install all deps including dev tools (uv sync --group dev)"
+	@echo "  make sync             - Sync environment to lockfile exactly (uv sync)"
 	@echo "  make test             - Run tests"
 	@echo "  make lint             - Run linting checks"
 	@echo "  make format           - Format code with black and isort"
@@ -14,19 +16,27 @@ help:
 	@echo "  make airflow-init     - Initialize Airflow database"
 	@echo "  make run-etl          - Run ETL pipeline locally"
 
+# uv sync reads pyproject.toml + uv.lock and installs exactly what's pinned.
+# First run creates uv.lock; subsequent runs are near-instant from cache.
 install:
-	pip install --upgrade pip
-	pip install -r requirements-dev.txt
+	uv sync
+
+install-dev:
+	uv sync --group dev
+
+# Alias: same as install-dev but more explicit about intent
+sync:
+	uv sync --group dev
 
 test:
-	pytest tests/ -v --cov=etl --cov-report=term-missing
+	uv run pytest
 
 lint:
-	flake8 etl/ tests/ dags/ --max-line-length=127 --extend-ignore=E402,
+	uv run flake8 etl/ tests/ dags/ --max-line-length=127 --extend-ignore=E402,
 
 format:
-	black etl/ tests/ dags/ --line-length 127
-#	isort etl/ tests/ dags/ --profile black
+	uv run black etl/ tests/ dags/ --line-length 127
+	uv run isort etl/ tests/ dags/ --profile black
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -52,6 +62,6 @@ airflow-init:
 	docker compose run --rm airflow-init
 
 run-etl:
-	python etl/main_etl.py
+	uv run python etl/main_etl.py
 
-all: install format lint test
+all: install-dev format lint test

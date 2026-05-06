@@ -1,6 +1,7 @@
-from airflow.decorators import dag, task
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
+
+from airflow.decorators import dag, task
 
 DEFAULT_LOCATIONS = ["Las Vegas, NV"]
 DEFAULT_MAX_PAGES = 2
@@ -43,9 +44,10 @@ def real_estate_etl_pipeline():
 
     @task()
     def extract_zillow(paths: Dict[str, str]) -> Dict[str, Any]:
-        import os
         import logging
+        import os
         from datetime import datetime, timezone
+
         from etl.extract import fetch_all_locations
 
         log = logging.getLogger("airflow.task")
@@ -162,6 +164,7 @@ def real_estate_etl_pipeline():
     def load_supabase(transform_metrics: Dict[str, any], extraction_metrics: Dict[str, any]) -> Dict[str, any]:
         """Load data to Supabase."""
         from datetime import datetime, timezone
+
         from etl.load import load_files_to_supabase
 
         run_date = datetime.now(timezone.utc).strftime("%Y%m%d")

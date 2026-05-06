@@ -31,6 +31,9 @@ etl_log/
 learning_note.txt
 notebook.ipynb
 
+.venv/
+.coverage
+htmlcov/
 .ruff_cache/
 .pytest_cache/
 .secrets
@@ -38,3 +41,5 @@ notebook.ipynb
 .input
 .vars
 
+CLAUDE.md
+.claude/

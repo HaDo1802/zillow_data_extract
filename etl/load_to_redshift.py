@@ -5,7 +5,6 @@ from pathlib import Path
 import psycopg2
 from psycopg2 import sql
 
-
 DEFAULT_COLUMNS = (
     "address, bathrooms, bedrooms, brokerName, carouselPhotos, comingSoonOnMarketDate, "
     "contingentListingType, country, currency, datePriceChanged, daysOnZillow, detailUrl, "
