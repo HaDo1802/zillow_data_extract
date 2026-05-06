@@ -25,6 +25,7 @@ The pipeline is orchestrated with Apache Airflow and is designed around two oper
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white)
 
 **Pipeline flow**
 
@@ -69,9 +70,9 @@ Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics /
 │   └── test_transform.py
 ├── .github/workflows/
 │   └── ci-cd.yml
+├── pyproject.toml
+├── uv.lock
 ├── requirements-airflow.txt
-├── requirements-dev.txt
-├── requirements.txt
 └── README.md
 ```
 
@@ -166,22 +167,57 @@ All pipeline timestamps use UTC to avoid timezone drift, daylight saving issues,
 
 ## Getting Started
 
-### Local ETL run
+### Prerequisites
+
+Install [uv](https://docs.astral.sh/uv/) — the package manager used by this project:
 
 ```bash
-pip install -r requirements.txt
-python etl/main_etl.py
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Airflow DAG
+### Local development setup
 
-Main DAG:
+```bash
+# Install all dependencies (creates .venv automatically)
+uv sync --group dev
 
-```text
-dags/TaskAPI_etl_dag.py
+# Run the ETL pipeline locally
+uv run python etl/main_etl.py
+
+# Run tests
+uv run pytest tests/ -v
+
+# Format and lint
+uv run black etl/ tests/ dags/ --line-length 127
+uv run isort etl/ tests/ dags/ --profile black
+uv run flake8 etl/ tests/ dags/ --max-line-length=127
 ```
 
-The DAG is scheduled daily and passes Airflow logical date metadata into extract and load so retries remain logically consistent.
+Or use the Makefile shortcuts:
+
+```bash
+make install-dev   # uv sync --group dev
+make test          # uv run pytest
+make format        # black + isort
+make lint          # flake8
+make run-etl       # uv run python etl/main_etl.py
+```
+
+**Adding or removing a dependency:**
+
+```bash
+uv add <package>            # adds to pyproject.toml + uv.lock
+uv add --group dev <tool>   # dev-only (not shipped in Docker)
+uv remove <package>         # removes from both files
+```
+
+### Dependency management
+
+| File | Purpose |
+|---|---|
+| `pyproject.toml` | Source of truth — declares all dependencies and tool config |
+| `uv.lock` | Exact pinned versions — commit this for reproducible installs |
+| `requirements-airflow.txt` | Docker-only — installed into the Airflow base image with Airflow's constraint URL |
 
 ### Airflow with Docker
 
@@ -189,13 +225,12 @@ The DAG is scheduled daily and passes Airflow logical date metadata into extract
 docker compose up --build
 ```
 
-The Airflow image installs dependencies from `requirements-airflow.txt`. Local development and testing use `requirements-dev.txt`.
+The Docker image installs production dependencies from `requirements-airflow.txt` using `uv pip install --system` with Airflow's official constraint file to ensure compatibility with the base image.
 
 ### Tests
 
 ```bash
-pip install -r requirements-dev.txt
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ---

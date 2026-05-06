@@ -6,9 +6,32 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "etl/**"
+      - "dags/**"
+      - "tests/**"
+      - "utils/**"
+      - "Dockerfile"
+      - "docker-compose.yaml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "requirements-airflow.txt"
+      - ".github/workflows/**"
   pull_request:
     branches:
       - main
+    paths:
+      - "etl/**"
+      - "dags/**"
+      - "tests/**"
+      - "utils/**"
+      - "Dockerfile"
+      - "docker-compose.yaml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "requirements-airflow.txt"
+      - ".github/workflows/**"
+  # workflow_dispatch has no path filter — manual runs always execute in full
   workflow_dispatch:
     inputs:
       run_full_pipeline:
