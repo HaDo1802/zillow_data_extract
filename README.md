@@ -1,4 +1,5 @@
-[![Real Estate ETL Pipeline CI/CD](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci-cd.yml)
+[![CI](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci.yml/badge.svg)](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci.yml)
+[![CD](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/cd.yml/badge.svg)](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/cd.yml)
 
 # Real Estate Data Pipeline
 
@@ -24,6 +25,8 @@ The pipeline is orchestrated with Apache Airflow and is designed around two oper
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
+![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white)
 
@@ -31,6 +34,12 @@ The pipeline is orchestrated with Apache Airflow and is designed around two oper
 
 ```text
 Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics / Modeling
+```
+
+**Deployment flow**
+
+```text
+git push main -> GitHub Actions (CI: lint, test, build, push image) -> CD: SSH deploy to EC2 -> Airflow on EC2 runs DAG on schedule
 ```
 
 <div align="center">
@@ -69,7 +78,9 @@ Zillow API -> Raw CSV -> Transform -> Supabase Storage -> Downstream Analytics /
 │   ├── test_load.py
 │   └── test_transform.py
 ├── .github/workflows/
-│   └── ci-cd.yml
+│   ├── ci.yml
+│   └── cd.yml
+├── terraform/
 ├── pyproject.toml
 ├── uv.lock
 ├── requirements-airflow.txt
@@ -159,6 +170,14 @@ Note: The pipeline is designed to be idempotent for run identity and artifact pa
 - Downstream jobs need a stable way to discover the most recent successful raw snapshot without scanning folders or inferring file names.
 - This keeps the handoff contract explicit and makes downstream consumption simpler, more reliable, and easier to automate.
 
+### Why EC2 over GitHub Actions for scheduling
+
+GitHub Actions VMs are ephemeral — they spin up, run a job, and shut down. They cannot host a persistent Airflow scheduler. An always-on EC2 t2.micro runs continuously so Airflow can trigger the DAG on schedule without a laptop being open.
+
+An EC2-based production deployment is implemented in the [`feat/aws-ec2-terraform`](https://github.com/HaDo1802/zillow_data_extract/tree/feat/aws-ec2-terraform) branch, using Terraform to provision the instance and a split CI/CD pipeline (ci.yml + cd.yml) for image-based deployment. See [`terraform/README.md`](terraform/README.md) for full infrastructure design details.
+
+The current `main` branch keeps the GitHub Actions scheduled pipeline as the active setup — it is free and sufficient for the scope of this project.
+
 ### Why UTC
 
 All pipeline timestamps use UTC to avoid timezone drift, daylight saving issues, and ambiguous historical comparisons across systems.
@@ -203,14 +222,6 @@ make lint          # flake8
 make run-etl       # uv run python etl/main_etl.py
 ```
 
-**Adding or removing a dependency:**
-
-```bash
-uv add <package>            # adds to pyproject.toml + uv.lock
-uv add --group dev <tool>   # dev-only (not shipped in Docker)
-uv remove <package>         # removes from both files
-```
-
 ### Dependency management
 
 | File | Purpose |
@@ -218,14 +229,6 @@ uv remove <package>         # removes from both files
 | `pyproject.toml` | Source of truth — declares all dependencies and tool config |
 | `uv.lock` | Exact pinned versions — commit this for reproducible installs |
 | `requirements-airflow.txt` | Docker-only — installed into the Airflow base image with Airflow's constraint URL |
-
-### Airflow with Docker
-
-```bash
-docker compose up --build
-```
-
-The Docker image installs production dependencies from `requirements-airflow.txt` using `uv pip install --system` with Airflow's official constraint file to ensure compatibility with the base image.
 
 ### Tests
 
