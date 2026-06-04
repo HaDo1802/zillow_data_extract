@@ -1,4 +1,6 @@
 import logging
+import pendulum
+
 from datetime import datetime, timedelta, timezone
 
 from airflow import DAG
@@ -6,10 +8,6 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
 from etl.email_notifier import EmailNotifier
-
-# Add ETL directory to Python path
-# sys.path.insert(0, "/opt/airflow")
-
 
 def send_success_notification(**context):
     """Send success notification with pipeline metrics."""
@@ -86,12 +84,12 @@ def send_failure_notification(context):
 default_args = {
     "owner": "hado",
     "depends_on_past": False,
-    "start_date": datetime(2025, 10, 25),
+    "start_date": pendulum.datetime(2026, 5, 22, tz="UTC"),
     "email": ["havando1802@gmail.com"],
     "email_on_failure": True,
-    "email_on_retry": False,
+    "email_on_retry": True,
     "retries": 1,
-    "retry_delay": timedelta(minutes=2),
+    "retry_delay": timedelta(minutes=1),
     "catchup": False,
     "on_failure_callback": send_failure_notification,
 }

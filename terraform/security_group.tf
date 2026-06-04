@@ -7,7 +7,7 @@ resource "aws_security_group" "airflow_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
+    cidr_blocks = [data.external.my_ip.result["ip"]]
   }
 
   ingress {
@@ -15,7 +15,7 @@ resource "aws_security_group" "airflow_sg" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
+    cidr_blocks = [data.external.my_ip.result["ip"]]
   }
 
   egress {

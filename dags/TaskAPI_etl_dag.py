@@ -15,8 +15,8 @@ DEFAULT_MAX_PAGES = 2
     tags=["real_estate", "production"],
     default_args={
         "owner": "hado",
-        "retries": 2,
-        "retry_delay": timedelta(minutes=5),
+        "retries": 1,
+        "retry_delay": timedelta(minutes=2),
     },
 )
 def real_estate_etl_pipeline():

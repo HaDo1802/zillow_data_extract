@@ -109,7 +109,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/real-estate-etl:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/real-estate-etl:latest
+            ${{ secrets.DOCKER_USERNAME }}/real-estate-etl:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -146,5 +148,5 @@ jobs:
             cd /home/ubuntu/real_estate_extract
             git pull origin main
             docker compose pull
-            docker compose up -d --build
+            docker compose up -d
             docker compose ps
