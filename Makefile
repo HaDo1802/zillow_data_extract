@@ -1,20 +1,24 @@
-.PHONY: help install install-dev sync test lint format clean docker-up docker-down docker-restart logs airflow-init run-etl all
+.PHONY: help install install-dev sync test lint format clean docker-up docker-down docker-restart logs airflow-init run-etl terraform-init terraform-plan terraform-apply terraform-destroy all
 
 help:
 	@echo "Available commands:"
-	@echo "  make install          - Install production dependencies (uv sync)"
-	@echo "  make install-dev      - Install all deps including dev tools (uv sync --group dev)"
-	@echo "  make sync             - Sync environment to lockfile exactly (uv sync)"
-	@echo "  make test             - Run tests"
-	@echo "  make lint             - Run linting checks"
-	@echo "  make format           - Format code with black and isort"
-	@echo "  make clean            - Remove generated files"
-	@echo "  make docker-up        - Start Docker containers"
-	@echo "  make docker-down      - Stop Docker containers"
-	@echo "  make docker-restart   - Restart Docker containers"
-	@echo "  make logs             - View Docker logs"
-	@echo "  make airflow-init     - Initialize Airflow database"
-	@echo "  make run-etl          - Run ETL pipeline locally"
+	@echo "  make install            - Install production dependencies (uv sync)"
+	@echo "  make install-dev        - Install all deps including dev tools (uv sync --group dev)"
+	@echo "  make sync               - Sync environment to lockfile exactly (uv sync)"
+	@echo "  make test               - Run tests"
+	@echo "  make lint               - Run linting checks"
+	@echo "  make format             - Format code with black and isort"
+	@echo "  make clean              - Remove generated files"
+	@echo "  make docker-up          - Start Docker containers"
+	@echo "  make docker-down        - Stop Docker containers"
+	@echo "  make docker-restart     - Restart Docker containers"
+	@echo "  make logs               - View Docker logs"
+	@echo "  make airflow-init       - Initialize Airflow database"
+	@echo "  make run-etl            - Run ETL pipeline locally"
+	@echo "  make terraform-init     - Initialize Terraform (first-time setup)"
+	@echo "  make terraform-plan     - Preview AWS infrastructure changes"
+	@echo "  make terraform-apply    - Provision AWS infrastructure"
+	@echo "  make terraform-destroy  - Tear down AWS infrastructure"
 
 # uv sync reads pyproject.toml + uv.lock and installs exactly what's pinned.
 # First run creates uv.lock; subsequent runs are near-instant from cache.
@@ -63,5 +67,17 @@ airflow-init:
 
 run-etl:
 	uv run python etl/main_etl.py
+
+terraform-init:
+	cd terraform && terraform init
+
+terraform-plan:
+	cd terraform && terraform plan
+
+terraform-apply:
+	cd terraform && terraform apply
+
+terraform-destroy:
+	cd terraform && terraform destroy
 
 all: install-dev format lint test

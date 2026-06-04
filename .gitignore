@@ -1,5 +1,6 @@
 
 *.env*
+!.env.example
 
 __pycache__/
 *.pyc
@@ -43,3 +44,10 @@ htmlcov/
 
 CLAUDE.md
 .claude/
+image/Screenshot 2026-05-30 at 1.09.43 PM.png
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/*.tfvars
