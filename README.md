@@ -1,5 +1,5 @@
 [![CI](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci.yml/badge.svg)](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/ci.yml)
-[![CD](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/cd.yml/badge.svg)](https://github.com/HaDo1802/zillow_data_extract/actions/workflows/cd.yml)
+
 
 # Real Estate Data Pipeline
 
@@ -130,7 +130,7 @@ This pipeline is orchestrated in Airflow and runs inside Docker. The Airflow UI 
 - Stores stable object keys derived from `snapshot_date` and `etl_run_id`
 
 ---
-
+# Side Note
 ## Idempotency And Reproducibility
 
 The pipeline is designed to be retry-safe and reproducible at the artifact level for the same logical date.
@@ -230,13 +230,6 @@ make run-etl       # uv run python etl/main_etl.py
 | `uv.lock` | Exact pinned versions — commit this for reproducible installs |
 | `requirements-airflow.txt` | Docker-only — installed into the Airflow base image with Airflow's constraint URL |
 
-### Tests
-
-```bash
-uv run pytest tests/ -v
-```
-
----
 
 ## Operational Notes
 
